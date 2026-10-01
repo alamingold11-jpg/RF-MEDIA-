@@ -1,4 +1,3 @@
-
 function getRealisticTaskUrl(platform, index) {
   const p = (platform || 'TikTok').toLowerCase();
   const idx = typeof index === 'number' ? index : 0;
