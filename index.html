@@ -9,6 +9,10 @@
   <link rel="stylesheet" href="/theme.css" onerror="this.onerror=null; this.href='theme.css';">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    html, body {
+      scroll-behavior: auto !important;
+    }
+
     .no-motion *,
     .no-motion *::before,
     .no-motion *::after {
@@ -17,9 +21,10 @@
       scroll-behavior: auto !important;
     }
 
+    [hidden],
     .page-view[hidden],
     .dashboard-panel[hidden] {
-      display: none;
+      display: none !important;
     }
 
     /* ---------- পেজ ট্রানজিশন ---------- */
@@ -3404,7 +3409,7 @@
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-slate-100 font-normal">হিসাব নাম্বার:</span>
                       <span id="profile-account-number" class="font-bold text-white tracking-wide">1735235999</span>
-                      <span id="profile-package-level" class="rounded px-1.5 py-0.5 bg-[#1877f2] text-white text-[11px] font-bold shadow-sm">LV1</span>
+                      <span id="profile-package-level" class="rounded px-1.5 py-0.5 bg-[#1877f2] text-white text-[11px] font-bold shadow-sm">LV0</span>
                     </div>
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="text-slate-100 font-normal">আমন্ত্রণ কোড:</span>
@@ -3605,7 +3610,6 @@
                 </section>
                 <p id="dashboard-message" class="min-h-8 pt-2 text-center text-xs" style="color: var(--color-profile-blue-text);"></p>
               </div>
-            </div>
           </section>
           <section id="home-panel" class="dashboard-panel space-y-4" aria-label="প্রথম পাতা" hidden>
             <section class="home-hero relative overflow-hidden rounded-[var(--radius)]" aria-label="প্রযুক্তি ও সংযোগের নীল ইলাস্ট্রেশন">
@@ -4191,7 +4195,7 @@
             <section class="hall-note mt-7 rounded-[var(--radius)] border p-5 text-center" aria-label="হল সম্পর্কে তথ্য">
               <span class="hall-note-icon mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full text-xl" aria-hidden="true">✦</span>
               <h2 class="text-base font-bold">আপনার অগ্রগতির পরবর্তী ধাপ</h2>
-              <p class="mx-auto mt-2 max-w-sm text-sm leading-6" style="color: var(--color-profile-text);">ব্যালেন্স না থাকলে শুধু LV0-এর নমুনা কাজ করতে পারবেন। LV0-এর কাজ সম্পন্ন করে ডেমো ব্যালেন্স হলে LV1–LV6-এর নমুনা কাজও খুলবে।</p>
+              <p class="mx-auto mt-2 max-w-sm text-sm leading-6" style="color: var(--color-profile-text);">ফ্রিতে শুধু LV0 কাজ করতে পারবেন। বাকি কাজ করতে গেলে আপনার ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</p>
               <p class="mt-3 text-xs leading-5" style="color: var(--color-muted);">সব ব্যালেন্স ও পুরস্কার ভার্চুয়াল ডেমো হিসাব—বাস্তব টাকা নয়।</p>
             </section>
           </section>
@@ -4238,7 +4242,7 @@
               </div>
               <div class="mt-5 grid grid-cols-2 gap-3">
                 <button type="button" class="my-pass-action" data-pass-message="উত্তোলনের সুবিধা এখানে চালু নেই।">উত্তোলন</button>
-                <button type="button" class="my-pass-action my-pass-deposit" data-pass-message="জমার সুবিধা এখানে চালু নেই।">জমা</button>
+                <button type="button" id="my-pass-deposit-btn" class="my-pass-action my-pass-deposit">জমা</button>
               </div>
               <p id="my-pass-message" class="mt-3 min-h-5 text-xs" role="status"></p>
             </div>
@@ -4425,87 +4429,214 @@
           </section>
 
           <section id="records-panel" class="dashboard-panel space-y-4" aria-label="প্যাকেজসমূহ" hidden>
-            <article class="dashboard-card overflow-hidden p-4" style="border-color: var(--color-vip-card-blue); background: linear-gradient(120deg, var(--color-vip-card-blue), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-blue) 28%, transparent);">
+            <!-- User Status & Balance Header in Packages -->
+            <div class="p-3 rounded-xl bg-[#0c1f4d] border border-[#1b3b80] flex items-center justify-between text-xs shadow-md">
+              <div>
+                <p class="text-slate-400 text-[11px]">আপনার বর্তমান স্তর:</p>
+                <p class="font-bold text-[#38bdf8] text-sm" id="records-current-level-display">LV0 (ফ্রি)</p>
+              </div>
+              <div class="text-center">
+                <p class="text-slate-400 text-[11px]">উপলব্ধ ব্যালেন্স:</p>
+                <p class="font-bold text-[#34d399] text-sm"><span id="records-balance-display">০.০০</span> BDT</p>
+              </div>
+              <button type="button" id="records-open-deposit-btn" class="px-3 py-1.5 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs transition cursor-pointer active:scale-95 shadow">
+                + রিচার্জ
+              </button>
+            </div>
+
+            <!-- LV0: Free Package -->
+            <article class="dashboard-card overflow-hidden p-4 relative" data-record-package="LV0" style="border-color: #1e3a8a; background: linear-gradient(120deg, #0e2764, #08173d); color: var(--color-primary-contrast); box-shadow: 0 8px 24px rgba(14,39,100,0.3);">
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold opacity-80">LV1</p>
-                  <h3 class="mt-1.5 text-xl font-bold">৩,৫০০ BDT</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-sky-500/20 text-[#38bdf8]">ফ্রি স্তর</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV0</p>
+                  <h3 class="mt-0.5 text-xl font-bold">০ BDT (ফ্রি)</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-2.5 py-1 text-[11px] font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer" data-buy-package="LV0">
+                  বর্তমান স্তর
+                </button>
               </div>
-              <div class="mt-4 flex items-center justify-between gap-3 border-t pt-3 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-base" style="color: var(--color-profile-yellow);">৬টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 20%, transparent);">
+                <div>
+                  <span class="text-slate-400">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">৫টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-400">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">২০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-400">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">১০০.০০ BDT</strong>
+                </div>
               </div>
             </article>
 
-            <article class="dashboard-card overflow-hidden p-5" style="border-color: var(--color-vip-card-sand); background: linear-gradient(120deg, var(--color-vip-card-sand), var(--color-vip-muted)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-muted) 24%, transparent);">
-              <div class="flex items-start justify-between gap-4">
+            <!-- LV1 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV1" style="border-color: var(--color-vip-card-blue); background: linear-gradient(120deg, var(--color-vip-card-blue), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-blue) 28%, transparent);">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold opacity-80">LV2</p>
-                  <h3 class="mt-2 text-2xl font-bold">৭,৫০০ BDT</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">বেসিক প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV1</p>
+                  <h3 class="mt-0.5 text-xl font-bold">৩,৫০০ BDT</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-3 py-1 text-xs font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV1">
+                  প্যাকেজ ক্রয় করুন
+                </button>
               </div>
-              <div class="mt-5 flex items-center justify-between gap-3 border-t pt-4 text-sm" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-lg" style="color: var(--color-profile-yellow);">১২টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">৬টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৩০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">১৮০.০০ BDT</strong>
+                </div>
               </div>
             </article>
 
-            <article class="dashboard-card overflow-hidden p-5" style="border-color: var(--color-vip-frame); background: linear-gradient(120deg, var(--color-vip-frame), var(--color-primary)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-frame) 30%, transparent);">
-              <div class="flex items-start justify-between gap-4">
+            <!-- LV2 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV2" style="border-color: var(--color-vip-card-sand); background: linear-gradient(120deg, var(--color-vip-card-sand), var(--color-vip-muted)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-muted) 24%, transparent);">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold opacity-80">LV3</p>
-                  <h3 class="mt-2 text-2xl font-bold">৩৬,০০০ BDT</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">স্ট্যান্ডার্ড প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV2</p>
+                  <h3 class="mt-0.5 text-xl font-bold">৭,৫০০ BDT</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-3 py-1 text-xs font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV2">
+                  প্যাকেজ ক্রয় করুন
+                </button>
               </div>
-              <div class="mt-5 flex items-center justify-between gap-3 border-t pt-4 text-sm" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-lg" style="color: var(--color-profile-yellow);">১৫টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">১২টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৪০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">৪৮০.০০ BDT</strong>
+                </div>
               </div>
             </article>
 
-            <article class="dashboard-card overflow-hidden p-5" style="border-color: var(--color-profile-blue-text); background: linear-gradient(120deg, var(--color-profile-blue), var(--color-profile-bg)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-blue-text) 26%, transparent);">
-              <div class="flex items-start justify-between gap-4">
+            <!-- LV3 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV3" style="border-color: var(--color-vip-frame); background: linear-gradient(120deg, var(--color-vip-frame), var(--color-primary)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-frame) 30%, transparent);">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold opacity-80">LV4</p>
-                  <h3 class="mt-2 text-2xl font-bold">৮৪,০০০ BDT</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">সিলভার প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV3</p>
+                  <h3 class="mt-0.5 text-xl font-bold">৩৬,০০০ BDT</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-3 py-1 text-xs font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV3">
+                  প্যাকেজ ক্রয় করুন
+                </button>
               </div>
-              <div class="mt-5 flex items-center justify-between gap-3 border-t pt-4 text-sm" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-lg" style="color: var(--color-profile-yellow);">১৮টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">১৫টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৫০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">৭৫০.০০ BDT</strong>
+                </div>
               </div>
             </article>
 
-            <article class="dashboard-card overflow-hidden p-5" style="border-color: var(--color-vip-card-purple); background: linear-gradient(120deg, var(--color-vip-card-purple), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-card-purple) 28%, transparent);">
-              <div class="flex items-start justify-between gap-4">
+            <!-- LV4 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV4" style="border-color: var(--color-profile-blue-text); background: linear-gradient(120deg, var(--color-profile-blue), var(--color-profile-bg)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-blue-text) 26%, transparent);">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold opacity-80">LV5</p>
-                  <h3 class="mt-2 text-xl font-bold">প্রিমিয়াম প্যাকেজ</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">গোল্ড প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV4</p>
+                  <h3 class="mt-0.5 text-xl font-bold">৮৪,০০০ BDT</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-3 py-1 text-xs font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV4">
+                  প্যাকেজ ক্রয় করুন
+                </button>
               </div>
-              <div class="mt-5 flex items-center justify-between gap-3 border-t pt-4 text-sm" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-lg" style="color: var(--color-profile-yellow);">২১টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">২৫টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৬০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">১,৫০০.০০ BDT</strong>
+                </div>
               </div>
             </article>
 
-            <article class="dashboard-card overflow-hidden p-5" style="border-color: var(--color-profile-cyan); background: linear-gradient(120deg, var(--color-profile-cyan), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-cyan) 26%, transparent);">
-              <div class="flex items-start justify-between gap-4">
+            <!-- LV5 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV5" style="border-color: var(--color-vip-card-purple); background: linear-gradient(120deg, var(--color-vip-card-purple), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-vip-card-purple) 28%, transparent);">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold opacity-80">LV6</p>
-                  <h3 class="mt-2 text-xl font-bold">এলিট প্যাকেজ</h3>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">প্রিমিয়াম প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV5</p>
+                  <h3 class="mt-0.5 text-xl font-bold">১,৫০,০০০ BDT</h3>
                 </div>
-                <span class="rounded-[var(--radius-round)] px-3 py-1 text-xs font-semibold" style="background: color-mix(in srgb, var(--color-primary-contrast) 18%, transparent);">এখনই যোগ দিন</span>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV5">
+                  প্যাকেজ ক্রয় করুন
+                </button>
               </div>
-              <div class="mt-5 flex items-center justify-between gap-3 border-t pt-4 text-sm" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
-                <span>দৈনিক কাজ</span>
-                <strong class="text-lg" style="color: var(--color-profile-yellow);">২৫টি</strong>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">৩৫টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৭০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">২,৪৫০.০০ BDT</strong>
+                </div>
+              </div>
+            </article>
+
+            <!-- LV6 -->
+            <article class="dashboard-card overflow-hidden p-4" data-record-package="LV6" style="border-color: var(--color-profile-cyan); background: linear-gradient(120deg, var(--color-profile-cyan), var(--color-profile-blue)); color: var(--color-primary-contrast); box-shadow: 0 8px 24px color-mix(in srgb, var(--color-profile-cyan) 26%, transparent);">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/10 text-white">এলিট প্যাকেজ</span>
+                  <p class="text-xs font-semibold opacity-80 mt-1">LV6</p>
+                  <h3 class="mt-0.5 text-xl font-bold">৩,০০,০০০ BDT</h3>
+                </div>
+                <button type="button" class="package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold transition shadow cursor-pointer bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95" data-buy-package="LV6">
+                  প্যাকেজ ক্রয় করুন
+                </button>
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-3 border-t pt-2.5 text-xs" style="border-color: color-mix(in srgb, var(--color-primary-contrast) 28%, transparent);">
+                <div>
+                  <span class="text-slate-300">দৈনিক কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-white">২৫টি</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">প্রতি কাজ:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#38bdf8]">৮০.০০ BDT</strong>
+                </div>
+                <div>
+                  <span class="text-slate-300">দৈনিক আয়:</span>
+                  <strong class="ml-1 text-sm font-bold text-[#34d399]">২,০০০.০০ BDT</strong>
+                </div>
               </div>
             </article>
           </section>
@@ -4568,11 +4699,8 @@
             </div>
           </section>
 
-          <section id="tasks-panel" class="dashboard-panel mission-record-screen -mx-4 -mt-4 min-h-[calc(100vh-4rem)]" aria-label="মিশন রেকর্ড" hidden>
-            <header class="sticky top-0 z-10 border-b px-4 py-4 text-center" style="border-color: var(--color-profile-border); background: var(--color-profile-blue);">
-              <h2 class="text-base font-bold">মিশন রেকর্ড</h2>
-            </header>
-            <div class="mission-record-tabs" role="tablist" aria-label="মিশনের অবস্থা">
+          <section id="tasks-panel" class="dashboard-panel mission-record-screen -mx-4 -mt-4 min-h-0" aria-label="মিশন রেকর্ড" hidden>
+            <div class="mission-record-tabs sticky top-[57px] z-10" role="tablist" aria-label="মিশনের অবস্থা">
               <button type="button" class="mission-record-tab" data-mission-filter="active" aria-selected="true">চলমান<span id="mission-active-count">(0)</span></button>
               <button type="button" class="mission-record-tab" data-mission-filter="review" aria-selected="false">পর্যালোচনা<span id="mission-review-count">(0)</span></button>
               <button type="button" class="mission-record-tab" data-mission-filter="complete" aria-selected="false">সম্পন্ন<span id="mission-complete-count">(0)</span></button>
@@ -4681,17 +4809,17 @@
                 <textarea id="mission-submit-comment" class="w-full bg-[#050f28] border border-[#162e66] rounded-lg p-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#1877f2] min-h-[5.5rem] resize-none" maxlength="100" placeholder="দয়া করে এখানে প্রবেশ করুন..."></textarea>
               </div>
 
-                            <!-- Screenshot Upload with Camera & Gallery Options -->
+                            <!-- Screenshot Upload with Camera Icon (Direct Gallery) -->
               <div class="space-y-2 pt-2">
                 <div class="flex items-center gap-4">
-                  <div class="text-white font-semibold text-sm leading-snug shrink-0">
+                  <label id="mission-upload-label" class="text-white font-semibold text-sm leading-snug shrink-0 cursor-pointer select-none" title="গ্যালারি খুলুন">
                     <p>স্ক্রিনশট</p>
                     <p>আপলোড</p>
                     <p>করুন</p>
-                  </div>
+                  </label>
                   <!-- Camera Upload Box / Thumbnail Preview -->
                   <div class="relative">
-                    <button type="button" id="mission-upload-trigger-btn" class="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#1b3469] bg-[#14264e] transition hover:bg-[#172d5c] active:scale-95 shadow overflow-hidden group" title="স্ক্রিনশট আপলোড বা প্রিভিউ">
+                    <button type="button" id="mission-upload-trigger-btn" class="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#1b3469] bg-[#14264e] transition hover:bg-[#172d5c] active:scale-95 shadow overflow-hidden group" title="গ্যালারি থেকে স্ক্রিনশট আপলোড করুন">
                       <span id="mission-submit-preview" class="flex h-full w-full items-center justify-center">
                         <!-- Clean White Camera Icon -->
                         <svg viewBox="0 0 24 24" class="h-8 w-8 text-white transition group-hover:scale-110" fill="currentColor">
@@ -4705,33 +4833,13 @@
                     </button>
                   </div>
 
-                  <!-- Direct Buttons: Camera and Gallery -->
-                  <div class="flex flex-col gap-1.5 justify-center py-0.5">
-                    <button type="button" id="btn-open-camera" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-xs font-bold text-white transition active:scale-95 shadow cursor-pointer">
-                      <svg viewBox="0 0 24 24" class="h-4 w-4 text-[#38bdf8]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-                        <circle cx="12" cy="13" r="3"/>
-                      </svg>
-                      <span>ক্যামেরা</span>
-                    </button>
-
-                    <button type="button" id="btn-open-gallery" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-xs font-bold text-white transition active:scale-95 shadow cursor-pointer">
-                      <svg viewBox="0 0 24 24" class="h-4 w-4 text-[#34d399]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                        <circle cx="9" cy="9" r="2"/>
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                      </svg>
-                      <span>গ্যালারি</span>
-                    </button>
-
-                    <button type="button" id="btn-view-preview-modal" class="hidden flex items-center gap-1 px-2.5 py-1 rounded bg-[#0b1c44] border border-[#15316d] text-[11px] font-bold text-[#38bdf8] hover:bg-[#122b68] transition cursor-pointer">
-                      <span>🔍 প্রিভিউ দেখুন</span>
-                    </button>
-                  </div>
+                  <!-- Quick preview button that only appears after screenshot is uploaded -->
+                  <button type="button" id="btn-view-preview-modal" class="hidden flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-xs font-bold text-[#38bdf8] transition active:scale-95 shadow cursor-pointer">
+                    <span>🔍 প্রিভিউ দেখুন</span>
+                  </button>
                 </div>
 
-                <!-- Hidden Input elements: One for camera, one for gallery, and legacy input -->
-                <input id="mission-submit-camera-file" type="file" accept="image/*" capture="environment" hidden>
+                <!-- Hidden Input elements: gallery and legacy input -->
                 <input id="mission-submit-gallery-file" type="file" accept="image/*" hidden>
                 <input id="mission-submit-file" type="file" accept="image/*" hidden>
 
@@ -4766,7 +4874,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="/app.js"></script>
   <!-- Global Screenshot Lightbox / Preview Modal -->
-  <div id="screenshot-lightbox-modal" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" hidden aria-modal="true" role="dialog">
+  <div id="screenshot-lightbox-modal" class="fixed inset-0 z-[10000] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
     <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
       <!-- Header -->
       <div class="flex items-center justify-between px-4 py-3 border-b border-[#14285c] bg-[#05112e]">
@@ -4793,42 +4901,122 @@
     </div>
   </div>
 
-  <!-- Bottom Sheet for Image Selection on Mobile -->
-  <div id="image-picker-sheet" class="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-xs transition-opacity duration-200" hidden aria-modal="true" role="dialog">
-    <div class="w-full max-w-[430px] rounded-t-2xl bg-[#08173d] border-t border-[#1b3469] p-4 space-y-3 shadow-2xl">
-      <div class="flex items-center justify-between pb-2 border-b border-[#14285c]">
-        <h4 class="text-sm font-bold text-white">স্ক্রিনশট আপলোড মাধ্যম বাছুন</h4>
-        <button type="button" id="close-picker-sheet" class="text-slate-400 hover:text-white text-sm p-1 cursor-pointer">✕</button>
-      </div>
-      <div class="grid grid-cols-2 gap-3 pt-1">
-        <button type="button" id="sheet-choose-camera" class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl bg-[#0e2454] hover:bg-[#143270] border border-[#1e428c] text-white transition active:scale-95 cursor-pointer">
-          <div class="w-10 h-10 rounded-full bg-[#1877f2]/20 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" class="h-6 w-6 text-[#38bdf8]" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-              <circle cx="12" cy="13" r="3"/>
-            </svg>
-          </div>
-          <span class="text-xs font-bold">ক্যামেরা</span>
-          <span class="text-[10px] text-slate-400">সরাসরি ছবি তুলুন</span>
+  <!-- Package Purchase Modal -->
+  <div id="package-purchase-modal" class="fixed inset-0 z-[10000] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
+    <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-[#14285c] bg-[#05112e]">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <span>💎</span> <span id="purchase-modal-title">প্যাকেজ ক্রয় ও আপগ্রেড</span>
+        </h3>
+        <button type="button" id="close-purchase-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer" aria-label="বন্ধ করুন">
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
+      </div>
+      <!-- Body -->
+      <div class="p-4 space-y-4 overflow-y-auto">
+        <div class="text-center py-3 px-3 bg-[#0c1f4d] rounded-xl border border-[#1b3b80]">
+          <span id="purchase-modal-badge" class="inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-500/20 text-[#38bdf8] mb-1">LV1</span>
+          <p class="text-2xl font-black text-white"><span id="purchase-modal-price">৩,৫০০</span> <span class="text-sm font-bold text-[#38bdf8]">BDT</span></p>
+          <p id="purchase-modal-details" class="text-xs text-slate-300 mt-1">দৈনিক ৬টি কাজ · প্রতি কাজের আয় ৩০.০০ BDT</p>
+        </div>
 
-        <button type="button" id="sheet-choose-gallery" class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl bg-[#0e2454] hover:bg-[#143270] border border-[#1e428c] text-white transition active:scale-95 cursor-pointer">
-          <div class="w-10 h-10 rounded-full bg-[#34d399]/20 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" class="h-6 w-6 text-[#34d399]" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-              <circle cx="9" cy="9" r="2"/>
-              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-            </svg>
+        <div class="bg-[#050f28] rounded-xl p-3.5 border border-[#14285c] space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">আপনার বর্তমান স্তর:</span>
+            <span id="purchase-modal-user-level" class="font-bold text-white">LV0 (ফ্রি)</span>
           </div>
-          <span class="text-xs font-bold">গ্যালারি / ফাইল</span>
-          <span class="text-[10px] text-slate-400">স্ক্রিনশট নির্বাচন</span>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">আপনার বর্তমান ব্যালেন্স:</span>
+            <span class="font-bold text-[#34d399]"><span id="purchase-modal-user-balance">০.০০</span> BDT</span>
+          </div>
+          <div class="flex items-center justify-between border-t border-[#14285c] pt-2">
+            <span class="text-slate-400">প্রয়োজনীয় মূল্য:</span>
+            <span id="purchase-modal-cost" class="font-bold text-amber-400">৩,৫০০.০০ BDT</span>
+          </div>
+        </div>
+
+        <div id="purchase-modal-status-box" class="p-3 rounded-lg text-xs leading-5">
+          <!-- Dynamic message based on balance sufficiency -->
+        </div>
+      </div>
+      <!-- Footer actions -->
+      <div class="p-3 border-t border-[#14285c] bg-[#05112e] flex flex-col gap-2">
+        <button type="button" id="confirm-package-purchase-btn" class="w-full py-2.5 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow">
+          ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন
+        </button>
+        <button type="button" id="open-deposit-from-purchase-btn" class="w-full py-2 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow hidden">
+          + ব্যালেন্স রিচার্জ / জমা করুন
+        </button>
+        <button type="button" id="cancel-package-purchase-btn" class="w-full py-1 text-xs text-slate-400 hover:text-white transition text-center cursor-pointer">
+          বাতিল করুন
         </button>
       </div>
-      <button type="button" id="sheet-cancel" class="w-full py-2.5 rounded-xl bg-[#050f28] text-slate-300 text-xs font-semibold hover:text-white transition cursor-pointer">
-        বাতিল করুন
-      </button>
     </div>
   </div>
 
-</body>
+  <!-- Deposit / Recharge Modal -->
+  <div id="deposit-modal" class="fixed inset-0 z-[10001] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
+    <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-[#14285c] bg-[#05112e]">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <span>💳</span> ব্যালেন্স রিচার্জ (জমা)
+        </h3>
+        <button type="button" id="close-deposit-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer" aria-label="বন্ধ করুন">
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <!-- Body -->
+      <div class="p-4 space-y-3 overflow-y-auto text-xs">
+        <div class="flex items-center justify-between bg-[#050f28] p-3 rounded-xl border border-[#14285c]">
+          <span class="text-slate-400">বর্তমান ব্যালেন্স:</span>
+          <span class="text-sm font-black text-[#34d399]"><span id="deposit-current-balance">০.০০</span> BDT</span>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1.5">রিচার্জের পরিমাণ নির্বাচন করুন:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="1000">+১,০০০</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="3500">+৩,৫০০ (LV1)</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="7500">+৭,৫০০ (LV2)</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="10000">+১০,০০০</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="36000">+৩৬,০০০ (LV3)</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="84000">+৮৪,০০০ (LV4)</button>
+          </div>
+        </div>
+
+        <div>
+          <label for="custom-deposit-amount" class="block text-slate-300 font-semibold mb-1">অথবা নির্দিষ্ট পরিমাণ (BDT):</label>
+          <input type="number" id="custom-deposit-amount" placeholder="উদাঃ ৩৫০০" class="w-full bg-[#050f28] border border-[#162e66] rounded-lg p-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#1877f2]">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">পেমেন্ট মেথড:</label>
+          <div class="grid grid-cols-3 gap-2 text-center text-[11px]">
+            <span class="py-1.5 px-2 rounded-lg bg-[#e2136e]/20 text-[#e2136e] font-bold border border-[#e2136e]/40">বিকাশ (bKash)</span>
+            <span class="py-1.5 px-2 rounded-lg bg-[#f7931e]/20 text-[#f7931e] font-bold border border-[#f7931e]/40">নগদ (Nagad)</span>
+            <span class="py-1.5 px-2 rounded-lg bg-[#26a17b]/20 text-[#26a17b] font-bold border border-[#26a17b]/40">USDT / ক্রিপ্টো</span>
+          </div>
+        </div>
+
+        <p id="deposit-status-message" class="text-center font-bold text-xs min-h-4 text-[#38bdf8]"></p>
+      </div>
+      <!-- Footer actions -->
+      <div class="p-3 border-t border-[#14285c] bg-[#05112e] flex flex-col gap-2">
+        <button type="button" id="confirm-deposit-btn" class="w-full py-2.5 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow">
+          রিচার্জ সম্পন্ন করুন ⚡
+        </button>
+        <button type="button" id="cancel-deposit-btn" class="w-full py-1 text-xs text-slate-400 hover:text-white transition text-center cursor-pointer">
+          বাতিল করুন
+        </button>
+      </div>
+    </div>
+  </div>
+
+  </body>
 </html>

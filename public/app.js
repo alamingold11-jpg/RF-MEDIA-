@@ -92,7 +92,7 @@ function showView(viewName, style) {
   if (!viewsReady || !currentEl || currentEl === nextEl || reduceMotion) {
     viewsReady = true;
     applyHidden();
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    forceScrollToTop();
     return;
   }
 
@@ -106,7 +106,7 @@ function showView(viewName, style) {
   viewTransitionTimer = window.setTimeout(function() {
     currentEl.classList.remove('view-leave');
     applyHidden();
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    forceScrollToTop();
     nextEl.classList.add(enterClass);
     viewTransitionTimer = window.setTimeout(function() {
       nextEl.classList.remove(enterClass);
@@ -202,7 +202,25 @@ function renderInvitePage() {
   }
 }
 
+function forceScrollToTop() {
+  try {
+    window.scrollTo(0, 0);
+  } catch(e) {}
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  } catch(e) {}
+  if (document.documentElement) document.documentElement.scrollTop = 0;
+  if (document.body) document.body.scrollTop = 0;
+  const shell = document.querySelector('.dashboard-shell');
+  if (shell) shell.scrollTop = 0;
+  const mainEl = document.querySelector('.dashboard-shell > main');
+  if (mainEl) mainEl.scrollTop = 0;
+  const dView = document.getElementById('dashboard-view');
+  if (dView) dView.scrollTop = 0;
+}
+
 function openDashboardPanel(panelName) {
+  forceScrollToTop();
   const nextPanel = dashboardTitles[panelName] ? panelName : 'profile';
   document.querySelectorAll('.dashboard-panel').forEach(function(panel) {
     panel.hidden = panel.id !== nextPanel + '-panel';
@@ -234,16 +252,22 @@ function openDashboardPanel(panelName) {
   if (nextPanel === 'profile') {
     updateProfileMetrics();
   }
+  if (nextPanel === 'vip') {
+    if (typeof updateVipHallRooms === 'function') updateVipHallRooms();
+  }
+  if (nextPanel === 'records') {
+    if (typeof updateRecordsPanelPackages === 'function') updateRecordsPanelPackages();
+  }
   if (nextPanel === 'tasks') {
     renderMissionRecords(activeMissionFilter);
   }
   if (nextPanel === 'mission-submit') {
     renderMissionSubmission();
   }
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
+  forceScrollToTop();
+  requestAnimationFrame(forceScrollToTop);
+  setTimeout(forceScrollToTop, 30);
+  setTimeout(forceScrollToTop, 100);
 }
 
 function updateUserDetails(user) {
@@ -258,13 +282,16 @@ function updateUserDetails(user) {
   if (accountNum) accountNum.textContent = user.phone || user.accountNumber || '1735235999';
 
   const packageLevel = document.getElementById('profile-package-level');
-  if (packageLevel) packageLevel.textContent = user.packageLevel || 'LV1';
+  if (packageLevel) packageLevel.textContent = user.packageLevel || 'LV0';
 
   const superiorId = document.getElementById('profile-superior-id');
   if (superiorId) superiorId.textContent = user.superiorId || '11';
 
   const userName = document.getElementById('dashboard-user-name');
   if (userName) userName.textContent = user.name || 'সদস্য';
+
+  if (typeof updateVipHallRooms === 'function') updateVipHallRooms();
+  if (typeof updateRecordsPanelPackages === 'function') updateRecordsPanelPackages();
 }
 
 async function hashPassword(password) {
@@ -476,6 +503,382 @@ const packageTaskSettings = {
   LV5: { count: 35, reward: 70 },
   LV6: { count: 25, reward: 80 }
 };
+
+const packageData = {
+  LV0: { name: 'ফ্রি স্তর', price: 0, count: 5, reward: 20, dailyIncome: 100, desc: 'দৈনিক ৫টি কাজ · প্রতি কাজের আয় ২০.০০ BDT' },
+  LV1: { name: 'বেসিক প্যাকেজ', price: 3500, count: 6, reward: 30, dailyIncome: 180, desc: 'দৈনিক ৬টি কাজ · প্রতি কাজের আয় ৩০.০০ BDT' },
+  LV2: { name: 'স্ট্যান্ডার্ড প্যাকেজ', price: 7500, count: 12, reward: 40, dailyIncome: 480, desc: 'দৈনিক ১২টি কাজ · প্রতি কাজের আয় ৪০.০০ BDT' },
+  LV3: { name: 'সিলভার প্যাকেজ', price: 36000, count: 15, reward: 50, dailyIncome: 750, desc: 'দৈনিক ১৫টি কাজ · প্রতি কাজের আয় ৫০.০০ BDT' },
+  LV4: { name: 'গোল্ড প্যাকেজ', price: 84000, count: 25, reward: 60, dailyIncome: 1500, desc: 'দৈনিক ২৫টি কাজ · প্রতি কাজের আয় ৬০.০০ BDT' },
+  LV5: { name: 'প্রিমিয়াম প্যাকেজ', price: 150000, count: 35, reward: 70, dailyIncome: 2450, desc: 'দৈনিক ৩৫টি কাজ · প্রতি কাজের আয় ৭০.০০ BDT' },
+  LV6: { name: 'এলিট প্যাকেজ', price: 300000, count: 25, reward: 80, dailyIncome: 2000, desc: 'দৈনিক ২৫টি কাজ · প্রতি কাজের আয় ৮০.০০ BDT' }
+};
+
+const LEVEL_ORDER = ['LV0', 'LV1', 'LV2', 'LV3', 'LV4', 'LV5', 'LV6'];
+
+function getCurrentUser() {
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('aloSignedInUser') || 'null');
+  } catch (e) {
+    user = null;
+  }
+  if (!user) {
+    user = {
+      name: 'সদস্য',
+      phone: '1735235999',
+      accountNumber: '1735235999',
+      inviteCode: '728207',
+      memberId: '1105',
+      superiorId: '11',
+      packageLevel: 'LV0',
+      purchasedPackages: ['LV0'],
+      balance: 0.00
+    };
+    localStorage.setItem('aloSignedInUser', JSON.stringify(user));
+  }
+  return user;
+}
+
+function formatBanglaNumber(num) {
+  const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(num).replace(/[0-9]/g, function(d) {
+    return banglaDigits[parseInt(d, 10)];
+  });
+}
+
+function formatMoney(amount) {
+  const num = Number(amount || 0);
+  const formatted = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatBanglaNumber(formatted);
+}
+
+function isLevelUnlocked(targetLevel, user) {
+  if (targetLevel === 'LV0') return true; // LV0 is ALWAYS free
+  if (!user) user = getCurrentUser();
+  if (user.purchasedPackages && user.purchasedPackages.includes(targetLevel)) {
+    return true;
+  }
+  const userLevel = user.packageLevel || 'LV0';
+  const userIdx = LEVEL_ORDER.indexOf(userLevel);
+  const targetIdx = LEVEL_ORDER.indexOf(targetLevel);
+  return userIdx >= targetIdx && userIdx > 0;
+}
+
+let currentPurchaseLevel = 'LV1';
+let pendingPurchaseLevel = '';
+let selectedDepositAmount = 3500;
+
+function updateVipHallRooms() {
+  const user = getCurrentUser();
+  const userLevel = user.packageLevel || 'LV0';
+  const rooms = document.querySelectorAll('.hall-level-room');
+  rooms.forEach(function(room) {
+    const lvl = room.dataset.level;
+    if (!lvl) return;
+    const isUnlocked = isLevelUnlocked(lvl, user);
+    const isCurrent = (lvl === userLevel);
+
+    let tag = room.querySelector('.hall-current-tag, .hall-status-tag');
+    if (!tag) {
+      tag = document.createElement('span');
+      const titleDiv = room.querySelector('.flex.items-center') || room.firstElementChild;
+      if (titleDiv) {
+        titleDiv.appendChild(tag);
+      } else {
+        room.appendChild(tag);
+      }
+    }
+    if (isCurrent) {
+      tag.className = 'hall-current-tag text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40';
+      tag.textContent = 'বর্তমান স্তর';
+    } else if (isUnlocked) {
+      tag.className = 'hall-status-tag text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200';
+      tag.textContent = 'আনলকড ✓';
+    } else {
+      tag.className = 'hall-status-tag text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 flex items-center gap-0.5';
+      tag.textContent = 'ক্রয় প্রয়োজন 🔒';
+    }
+  });
+}
+
+function updateRecordsPanelPackages() {
+  const user = getCurrentUser();
+  const userLevel = user.packageLevel || 'LV0';
+  const curLevelDisplay = document.getElementById('records-current-level-display');
+  if (curLevelDisplay) {
+    const pkgName = packageData[userLevel]?.name || 'ফ্রি স্তর';
+    curLevelDisplay.textContent = `${userLevel} (${pkgName})`;
+  }
+  const balDisplay = document.getElementById('records-balance-display');
+  if (balDisplay) {
+    balDisplay.textContent = formatMoney(user.balance || 0);
+  }
+
+  const pkgCards = document.querySelectorAll('[data-record-package]');
+  pkgCards.forEach(function(card) {
+    const level = card.dataset.recordPackage;
+    const btn = card.querySelector('[data-buy-package]');
+    if (!btn) return;
+    const isCurrent = (level === userLevel);
+    const isPurchased = (user.purchasedPackages && user.purchasedPackages.includes(level));
+
+    if (isCurrent) {
+      btn.textContent = 'বর্তমান স্তর';
+      btn.disabled = true;
+      btn.className = 'package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold shadow bg-slate-700/60 text-slate-300 cursor-default';
+    } else if (isPurchased) {
+      btn.textContent = 'ক্রয় করা হয়েছে ✓';
+      btn.disabled = true;
+      btn.className = 'package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold shadow bg-emerald-700/60 text-emerald-200 cursor-default';
+    } else {
+      btn.textContent = 'প্যাকেজ ক্রয় করুন';
+      btn.disabled = false;
+      btn.className = 'package-card-btn rounded-[var(--radius-round)] px-3 py-1.5 text-xs font-bold shadow bg-[#1877f2] hover:bg-[#166fe5] text-white active:scale-95 cursor-pointer';
+    }
+  });
+}
+
+function openPackagePurchaseModal(level, alertNotice) {
+  if (!packageData[level] || level === 'LV0') return;
+  currentPurchaseLevel = level;
+  const pkg = packageData[level];
+  const user = getCurrentUser();
+  const userBal = Number(user.balance || 0);
+  const price = pkg.price;
+  const isSufficient = userBal >= price;
+
+  const modal = document.getElementById('package-purchase-modal');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('purchase-modal-title');
+  if (titleEl) titleEl.textContent = `${level} প্যাকেজ ক্রয় ও আপগ্রেড`;
+
+  const badgeEl = document.getElementById('purchase-modal-badge');
+  if (badgeEl) badgeEl.textContent = `${level} · ${pkg.name}`;
+
+  const priceEl = document.getElementById('purchase-modal-price');
+  if (priceEl) priceEl.textContent = formatBanglaNumber(price.toLocaleString('en-US'));
+
+  const detailsEl = document.getElementById('purchase-modal-details');
+  if (detailsEl) detailsEl.textContent = pkg.desc;
+
+  const userLevelEl = document.getElementById('purchase-modal-user-level');
+  if (userLevelEl) {
+    const userPkgName = packageData[user.packageLevel]?.name || 'ফ্রি স্তর';
+    userLevelEl.textContent = `${user.packageLevel || 'LV0'} (${userPkgName})`;
+  }
+
+  const userBalEl = document.getElementById('purchase-modal-user-balance');
+  if (userBalEl) userBalEl.textContent = formatMoney(userBal);
+
+  const costEl = document.getElementById('purchase-modal-cost');
+  if (costEl) costEl.textContent = formatMoney(price) + ' BDT';
+
+  const statusBox = document.getElementById('purchase-modal-status-box');
+  const confirmBtn = document.getElementById('confirm-package-purchase-btn');
+  const depositBtn = document.getElementById('open-deposit-from-purchase-btn');
+
+  if (statusBox) {
+    if (isSufficient) {
+      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-emerald-950/70 border border-emerald-500/50 text-emerald-200';
+      statusBox.innerHTML = `
+        <div class="flex items-start gap-2">
+          <span class="text-base text-emerald-400">✓</span>
+          <div>
+            <p class="font-bold text-emerald-300">পর্যাপ্ত ব্যালেন্স বিদ্যমান রয়েছে</p>
+            <p class="mt-0.5 text-slate-300">আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স আছে। নিচে 'ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন' বাটনে ক্লিক করে প্যাকেজটি এখনই চালু করুন।</p>
+          </div>
+        </div>
+      `;
+    } else {
+      const deficit = price - userBal;
+      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-amber-950/80 border border-amber-500/50 text-amber-200';
+      statusBox.innerHTML = `
+        <div class="flex items-start gap-2">
+          <span class="text-base text-amber-400">⚠️</span>
+          <div>
+            <p class="font-bold text-amber-300">ফ্রিতে শুধু LV0 কাজ করতে পারবেন!</p>
+            <p class="mt-0.5 text-slate-300">${alertNotice || `${level} প্যাকেজের কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।`}</p>
+            <p class="mt-1 font-semibold text-amber-300">আপনার আরও <strong class="text-white">${formatMoney(deficit)} BDT</strong> ব্যালেন্স রিচার্জ (জমা) করতে হবে।</p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (confirmBtn) {
+    if (isSufficient) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = `ব্যালেন্স দিয়ে ${level} প্যাকেজ ক্রয় করুন`;
+      confirmBtn.className = 'w-full py-2.5 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow';
+    } else {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = `ব্যালেন্স অপর্যাপ্ত (${level} এর জন্য ${formatMoney(price - userBal)} BDT প্রয়োজন)`;
+      confirmBtn.className = 'w-full py-2.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold border border-slate-700 cursor-not-allowed opacity-75';
+    }
+  }
+
+  if (depositBtn) {
+    if (isSufficient) {
+      depositBtn.classList.add('hidden');
+    } else {
+      depositBtn.classList.remove('hidden');
+      depositBtn.textContent = `+ ব্যালেন্স রিচার্জ / জমা করুন (${formatMoney(price - userBal)} BDT ঘাটতি)`;
+    }
+  }
+
+  modal.style.display = 'flex';
+  modal.hidden = false;
+  modal.removeAttribute('hidden');
+}
+
+function closePackagePurchaseModal() {
+  const modal = document.getElementById('package-purchase-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.hidden = true;
+    modal.setAttribute('hidden', '');
+  }
+}
+
+function openDepositModal(initialAmount) {
+  const modal = document.getElementById('deposit-modal');
+  if (!modal) return;
+  const user = getCurrentUser();
+  const curBalEl = document.getElementById('deposit-current-balance');
+  if (curBalEl) curBalEl.textContent = formatMoney(user.balance || 0);
+
+  const statusMsg = document.getElementById('deposit-status-message');
+  if (statusMsg) statusMsg.textContent = '';
+
+  const customInput = document.getElementById('custom-deposit-amount');
+  if (customInput) customInput.value = '';
+
+  if (initialAmount && initialAmount > 0) {
+    selectedDepositAmount = initialAmount;
+    if (customInput) customInput.value = initialAmount;
+  } else {
+    selectedDepositAmount = 3500;
+  }
+
+  document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
+    const amt = parseInt(b.dataset.amount || '0', 10);
+    if (amt === selectedDepositAmount) {
+      b.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      b.classList.remove('bg-[#0e2a66]');
+    } else {
+      b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      b.classList.add('bg-[#0e2a66]');
+    }
+  });
+
+  modal.style.display = 'flex';
+  modal.hidden = false;
+  modal.removeAttribute('hidden');
+}
+
+function closeDepositModal() {
+  const modal = document.getElementById('deposit-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.hidden = true;
+    modal.setAttribute('hidden', '');
+  }
+}
+
+function confirmPackagePurchase() {
+  const level = currentPurchaseLevel;
+  const pkg = packageData[level];
+  if (!pkg) return;
+  const user = getCurrentUser();
+  const userBal = Number(user.balance || 0);
+  const cost = pkg.price;
+
+  if (userBal < cost) {
+    const deficit = cost - userBal;
+    pendingPurchaseLevel = level;
+    closePackagePurchaseModal();
+    openDepositModal(deficit);
+    return;
+  }
+
+  user.balance = Math.max(0, userBal - cost);
+  user.packageLevel = level;
+  if (!user.purchasedPackages) user.purchasedPackages = ['LV0'];
+  if (!user.purchasedPackages.includes(level)) {
+    user.purchasedPackages.push(level);
+  }
+  localStorage.setItem('aloSignedInUser', JSON.stringify(user));
+
+  closePackagePurchaseModal();
+  updateUserDetails(user);
+  updateProfileMetrics();
+  updateVipHallRooms();
+  updateRecordsPanelPackages();
+
+  showToastNotification(`🎉 অভিনন্দন! আপনার ${level} (${pkg.name}) প্যাকেজ সফলভাবে সক্রিয় হয়েছে! এখন আপনি ${level}-এর সমস্ত কাজ করতে পারবেন।`);
+
+  renderPackageTasks(level);
+  openDashboardPanel('platform-tasks');
+}
+
+function confirmDeposit() {
+  const customInput = document.getElementById('custom-deposit-amount');
+  let amount = selectedDepositAmount;
+  if (customInput && customInput.value && parseFloat(customInput.value) > 0) {
+    amount = parseFloat(customInput.value);
+  }
+  if (!amount || amount <= 0) {
+    const statusMsg = document.getElementById('deposit-status-message');
+    if (statusMsg) {
+      statusMsg.className = 'text-center font-bold text-xs text-amber-400';
+      statusMsg.textContent = 'অনুগ্রহ করে রিচার্জের বৈধ পরিমাণ দিন।';
+    }
+    return;
+  }
+
+  const user = getCurrentUser();
+  user.balance = (Number(user.balance) || 0) + amount;
+  localStorage.setItem('aloSignedInUser', JSON.stringify(user));
+
+  const statusMsg = document.getElementById('deposit-status-message');
+  if (statusMsg) {
+    statusMsg.className = 'text-center font-bold text-xs text-emerald-400';
+    statusMsg.textContent = `✅ ${formatMoney(amount)} BDT রিচার্জ সফল হয়েছে!`;
+  }
+
+  updateProfileMetrics();
+  updateUserDetails(user);
+  updateVipHallRooms();
+  updateRecordsPanelPackages();
+
+  setTimeout(function() {
+    closeDepositModal();
+    if (pendingPurchaseLevel) {
+      const lvl = pendingPurchaseLevel;
+      pendingPurchaseLevel = '';
+      openPackagePurchaseModal(lvl);
+    }
+  }, 700);
+}
+
+function showToastNotification(messageText) {
+  let toast = document.getElementById('alo-toast-notification');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'alo-toast-notification';
+    toast.className = 'fixed top-5 inset-x-4 mx-auto max-w-sm z-[10005] p-3.5 rounded-xl bg-[#08173d]/95 border border-[#1b3b80] text-white shadow-2xl backdrop-blur-md text-xs leading-5 flex items-center gap-3 transition-all duration-300 transform -translate-y-12 opacity-0 pointer-events-none';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span class="text-xl shrink-0">✨</span><span class="flex-1 font-semibold">${messageText}</span>`;
+  toast.classList.remove('-translate-y-12', 'opacity-0', 'pointer-events-none');
+  toast.classList.add('translate-y-0', 'opacity-100');
+  setTimeout(function() {
+    toast.classList.remove('translate-y-0', 'opacity-100');
+    toast.classList.add('-translate-y-12', 'opacity-0', 'pointer-events-none');
+  }, 3500);
+}
 
 const platformTaskDescriptions = {
   TikTok: [
@@ -710,6 +1113,8 @@ function refreshDailyMissionLimit(level) {
   const title = document.getElementById('platform-task-level-title');
   const note = document.getElementById('platform-task-level-note');
   
+  const user = getCurrentUser();
+  const isUnlocked = isLevelUnlocked(level, user);
   const today = new Date().toDateString();
   const missions = readAcceptedMissions();
   const acceptedToday = missions.filter(function(m) {
@@ -721,24 +1126,44 @@ function refreshDailyMissionLimit(level) {
   const reached = currentCount >= quotaLimit;
 
   if (title) {
-    title.innerHTML = `${activePlatform} · <strong style="color: var(--color-primary-contrast);">${level}</strong> (দৈনিক কোটা: ${quotaLimit}টি)`;
+    if (!isUnlocked) {
+      title.innerHTML = `${activePlatform} · <strong style="color: var(--color-warning);">${level} 🔒 (লকড)</strong>`;
+    } else {
+      title.innerHTML = `${activePlatform} · <strong style="color: var(--color-primary-contrast);">${level}</strong> (দৈনিক কোটা: ${quotaLimit}টি)`;
+    }
   }
   if (note) {
-    const remaining = Math.max(0, quotaLimit - currentCount);
-    note.innerHTML = `
-      <div class="flex items-center justify-between text-xs mt-1" style="color: var(--color-profile-text);">
-        <span>দৈনিক কাজের কোটা: <strong>${quotaLimit}টি</strong></span>
-        <span class="font-bold" style="color: ${reached ? 'var(--color-warning)' : 'var(--color-profile-cyan)'};">
-          গৃহীত: ${currentCount}/${quotaLimit} ${reached ? '(সীমা পূর্ণ)' : `(বাকি ${remaining}টি)`}
-        </span>
-      </div>
-      <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 9999px; margin-top: 6px; overflow: hidden;">
-        <div style="width: ${Math.min(100, (currentCount / quotaLimit) * 100)}%; height: 100%; background: ${reached ? 'var(--color-warning)' : 'var(--color-profile-cyan)'}; transition: width 300ms ease;"></div>
-      </div>
-      <p style="font-size: 11px; color: var(--color-muted); margin-top: 6px;">
-        প্রতি কাজে ${packageTaskSettings[level]?.reward || 20}.০০ BDT · প্যাকেজে মোট ২৫টি উপলব্ধ কাজের তালিকা
-      </p>
-    `;
+    if (!isUnlocked) {
+      note.innerHTML = `
+        <div class="rounded-xl p-3 bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs shadow-md">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="font-bold text-white flex items-center gap-1.5"><span class="text-base text-amber-400">🔒</span> এই প্যাকেজটি আনলক করা নেই</p>
+              <p class="text-[11px] text-amber-200/90 mt-1">ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ${level}-এর কাজ করতে আপনার ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</p>
+            </div>
+            <button type="button" class="shrink-0 px-3.5 py-1.5 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white font-bold text-xs shadow transition active:scale-95 cursor-pointer" data-buy-package="${level}">
+              প্যাকেজ ক্রয়
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      const remaining = Math.max(0, quotaLimit - currentCount);
+      note.innerHTML = `
+        <div class="flex items-center justify-between text-xs mt-1" style="color: var(--color-profile-text);">
+          <span>দৈনিক কাজের কোটা: <strong>${quotaLimit}টি</strong></span>
+          <span class="font-bold" style="color: ${reached ? 'var(--color-warning)' : 'var(--color-profile-cyan)'};">
+            গৃহীত: ${currentCount}/${quotaLimit} ${reached ? '(সীমা পূর্ণ)' : `(বাকি ${remaining}টি)`}
+          </span>
+        </div>
+        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 9999px; margin-top: 6px; overflow: hidden;">
+          <div style="width: ${Math.min(100, (currentCount / quotaLimit) * 100)}%; height: 100%; background: ${reached ? 'var(--color-warning)' : 'var(--color-profile-cyan)'}; transition: width 300ms ease;"></div>
+        </div>
+        <p style="font-size: 11px; color: var(--color-muted); margin-top: 6px;">
+          প্রতি কাজে ${packageTaskSettings[level]?.reward || 20}.০০ BDT · প্যাকেজে মোট ২৫টি উপলব্ধ কাজের তালিকা
+        </p>
+      `;
+    }
   }
 
   if (platformTaskList) {
@@ -751,7 +1176,12 @@ function refreshDailyMissionLimit(level) {
         return m.platform === activePlatform && m.level === level && m.taskIndex === taskIdx && new Date(m.acceptedAt).toDateString() === today;
       });
 
-      if (isTaskAccepted) {
+      if (!isUnlocked) {
+        btn.textContent = 'লকড 🔒';
+        btn.disabled = false;
+        btn.className = 'platform-task-accept bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30';
+        btn.dataset.lockedLevel = level;
+      } else if (isTaskAccepted) {
         btn.textContent = 'গৃহীত';
         btn.disabled = true;
         btn.dataset.accepted = 'true';
@@ -771,7 +1201,9 @@ function refreshDailyMissionLimit(level) {
   }
 
   if (message) {
-    if (reached) {
+    if (!isUnlocked) {
+      message.innerHTML = `<span style="color: var(--color-warning); font-weight: bold;">⚠️ ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ${level}-এর কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</span>`;
+    } else if (reached) {
       message.innerHTML = `<span style="color: var(--color-warning); font-weight: bold;">⚠️ আজকের ${level} প্যাকেজের ${quotaLimit}টি কাজের সীমা পূর্ণ হয়েছে!</span> <br><small style="color: var(--color-muted);">টাস্ক মেনুতে গিয়ে কাজ জমা দিন। আগামীকাল আবার নতুন কোটা চালু হবে।</small>`;
     } else {
       message.innerHTML = `আজকের বাকি কাজ: <strong style="color: var(--color-profile-cyan);">${quotaLimit - currentCount}টি</strong> (মোট কোটা ${quotaLimit}টি)`;
@@ -923,6 +1355,8 @@ function renderPackageTasks(level) {
   if (!platformTaskList) return;
 
   activePackageLevel = packageTaskSettings[level] ? level : 'LV0';
+  const user = getCurrentUser();
+  const isUnlocked = isLevelUnlocked(activePackageLevel, user);
   const settings = packageTaskSettings[activePackageLevel];
   const descriptions = platformTaskDescriptions[activePlatform] || platformTaskDescriptions.TikTok;
 
@@ -937,6 +1371,21 @@ function renderPackageTasks(level) {
   const TOTAL_TASKS_TO_DISPLAY = 25; // 25-30 tasks per package according to function
   const rows = [];
 
+  if (!isUnlocked) {
+    const banner = document.createElement('div');
+    banner.className = 'mb-4 p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs shadow-lg flex items-center justify-between gap-3';
+    banner.innerHTML = `
+      <div class="min-w-0 flex-1">
+        <p class="font-bold text-white flex items-center gap-1.5"><span class="text-base text-amber-400">🔒</span> প্যাকেজ ক্রয় প্রয়োজন</p>
+        <p class="mt-1 text-[11px] text-amber-200/90 leading-4">ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ${activePackageLevel}-এর কাজ করতে আপনার ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</p>
+      </div>
+      <button type="button" class="shrink-0 px-3.5 py-2 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white font-bold text-xs shadow transition active:scale-95 cursor-pointer" data-buy-package="${activePackageLevel}">
+        প্যাকেজ ক্রয়
+      </button>
+    `;
+    rows.push(banner);
+  }
+
   for (let i = 0; i < TOTAL_TASKS_TO_DISPLAY; i++) {
     const isThisAccepted = missions.some(function(m) {
       return m.platform === activePlatform && m.level === activePackageLevel && m.taskIndex === i && new Date(m.acceptedAt).toDateString() === today;
@@ -945,8 +1394,14 @@ function renderPackageTasks(level) {
     let btnText = 'গ্রহণ';
     let btnDisabled = false;
     let extraAttr = '';
+    let btnClass = 'platform-task-accept';
 
-    if (isThisAccepted) {
+    if (!isUnlocked) {
+      btnText = 'লকড 🔒';
+      btnDisabled = false;
+      extraAttr = `data-locked-level="${activePackageLevel}"`;
+      btnClass = 'platform-task-accept bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30';
+    } else if (isThisAccepted) {
       btnText = 'গৃহীত';
       btnDisabled = true;
       extraAttr = 'data-accepted="true"';
@@ -976,7 +1431,7 @@ function renderPackageTasks(level) {
           <p class="text-[10px]" style="color: var(--color-muted);">দৈনিক পুরস্কার</p>
           <p class="font-bold text-sm" style="color: var(--color-profile-blue-text);">${settings.reward}.০০ BDT</p>
         </div>
-        <button type="button" class="platform-task-accept" data-platform-accept ${btnDisabled ? 'disabled' : ''} ${extraAttr}>${btnText}</button>
+        <button type="button" class="${btnClass}" data-platform-accept ${btnDisabled ? 'disabled' : ''} ${extraAttr}>${btnText}</button>
       </div>
     `;
     rows.push(row);
@@ -1065,13 +1520,19 @@ function renderMissionSubmission() {
   const viewPreviewBtn = document.getElementById('btn-view-preview-modal');
   if (previewEl) {
     if (activeSubmissionImage) {
-      previewEl.innerHTML = `<img src="${activeSubmissionImage}" alt="স্ক্রিনশট" class="h-full w-full object-cover rounded cursor-pointer" title="পূর্ণ স্ক্রিনশট প্রিভিউ দেখতে ক্লিক করুন">`;
+      previewEl.innerHTML = `<img src="${activeSubmissionImage}" alt="স্ক্রিনশট" class="h-full w-full object-cover rounded cursor-pointer" style="width:100%;height:100%;object-fit:cover;border-radius:6px;display:block;" title="পূর্ণ স্ক্রিনশট প্রিভিউ দেখতে ক্লিক করুন">`;
       if (removeImgBtn) removeImgBtn.classList.remove('hidden');
-      if (viewPreviewBtn) viewPreviewBtn.classList.remove('hidden');
+      if (viewPreviewBtn) {
+        viewPreviewBtn.classList.remove('hidden');
+        viewPreviewBtn.style.display = 'inline-flex';
+      }
     } else {
       previewEl.innerHTML = `<svg viewBox="0 0 24 24" class="h-8 w-8 text-white transition group-hover:scale-110" fill="currentColor"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>`;
       if (removeImgBtn) removeImgBtn.classList.add('hidden');
-      if (viewPreviewBtn) viewPreviewBtn.classList.add('hidden');
+      if (viewPreviewBtn) {
+        viewPreviewBtn.classList.add('hidden');
+        viewPreviewBtn.style.display = 'none';
+      }
     }
   }
   const fileStatus = document.getElementById('mission-submit-file-status');
@@ -1271,8 +1732,38 @@ document.addEventListener('click', function(event) {
   const levelRoom = event.target.closest('[data-open-level-tasks]');
   if (levelRoom) {
     const level = levelRoom.dataset.level || 'LV0';
+    const user = getCurrentUser();
+    if (level !== 'LV0' && !isLevelUnlocked(level, user)) {
+      openPackagePurchaseModal(level, 'ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ' + level + ' কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন।');
+      return;
+    }
     renderPackageTasks(level);
     openDashboardPanel('platform-tasks');
+    return;
+  }
+
+  // Buy package button click
+  const buyPkgBtn = event.target.closest('[data-buy-package]');
+  if (buyPkgBtn) {
+    const level = buyPkgBtn.dataset.buyPackage;
+    if (level && level !== 'LV0') {
+      openPackagePurchaseModal(level);
+    }
+    return;
+  }
+
+  // Locked level button click
+  const lockedBtn = event.target.closest('[data-locked-level]');
+  if (lockedBtn) {
+    const lvl = lockedBtn.dataset.lockedLevel || activePackageLevel;
+    openPackagePurchaseModal(lvl, 'ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ' + lvl + ' কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন।');
+    return;
+  }
+
+  // Open deposit modal buttons
+  const depositOpenBtn = event.target.closest('#records-open-deposit-btn, #my-pass-deposit-btn');
+  if (depositOpenBtn) {
+    openDepositModal(3500);
     return;
   }
 
@@ -1293,7 +1784,13 @@ document.addEventListener('click', function(event) {
 
   // Accept mission button
   const acceptBtn = event.target.closest('[data-platform-accept]');
-  if (acceptBtn && !acceptBtn.disabled) {
+  if (acceptBtn) {
+    const user = getCurrentUser();
+    if (activePackageLevel !== 'LV0' && !isLevelUnlocked(activePackageLevel, user)) {
+      openPackagePurchaseModal(activePackageLevel, 'ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ' + activePackageLevel + ' কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন।');
+      return;
+    }
+    if (acceptBtn.disabled) return;
     const row = acceptBtn.closest('.platform-task-row');
     const taskIndex = row ? parseInt(row.dataset.taskIndex || '0', 10) : 0;
     const quota = packageTaskSettings[activePackageLevel]?.count || 5;
@@ -1403,26 +1900,20 @@ document.addEventListener('click', function(event) {
     return;
   }
 
-  // View task screenshot in lightbox
-  const taskScreenshotBtn = event.target.closest('[data-task-screenshot]');
-  if (taskScreenshotBtn) {
-    const mId = taskScreenshotBtn.dataset.taskScreenshot;
+  // View task screenshot button in records/tasks
+  const viewScreenshotBtn = event.target.closest('[data-task-screenshot]');
+  if (viewScreenshotBtn) {
+    const missionId = viewScreenshotBtn.dataset.taskScreenshot;
     const missions = readAcceptedMissions();
-    const m = missions.find(function(item) { return item.id === mId; });
-    if (m && m.screenshot) {
-      openScreenshotLightbox(m.screenshot, `${m.platform || 'মিশন'} - জমা দেওয়া স্ক্রিনশট প্রিভিউ`);
+    const mission = missions.find(function(m) { return m.id === missionId; });
+    if (mission && mission.screenshot) {
+      openScreenshotLightbox(mission.screenshot, (mission.platform || 'টাস্ক') + ' - কাজের স্ক্রিনশট প্রিভিউ');
     }
     return;
   }
-
-  // Logout button
-  const logoutBtn = event.target.closest('#logout-button');
-  if (logoutBtn) {
-    localStorage.removeItem('aloSignedInUser');
-    showView('login');
-    return;
-  }
 });
+
+  
 
 // Submission confirm click: Sets to 'review' for 5-10 minutes
 const confirmSubmitBtn = document.getElementById('mission-submit-confirm');
@@ -1480,7 +1971,7 @@ if (confirmSubmitBtn) {
 }
 
 
-// --- SCREENSHOT LIGHTBOX & PICKER MODAL CONTROLLERS ---
+// --- SCREENSHOT LIGHTBOX & INSTANT PREVIEW CONTROLLERS ---
 function openScreenshotLightbox(imageSrc, caption) {
   const modal = document.getElementById('screenshot-lightbox-modal');
   const img = document.getElementById('lightbox-image');
@@ -1488,46 +1979,85 @@ function openScreenshotLightbox(imageSrc, caption) {
   if (!modal || !img) return;
   img.src = imageSrc || '';
   if (cap) cap.textContent = caption || 'স্ক্রিনশট প্রিভিউ';
-  modal.hidden = false;
+  modal.removeAttribute('hidden');
+  modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
 
 function closeScreenshotLightbox() {
   const modal = document.getElementById('screenshot-lightbox-modal');
-  if (modal) modal.hidden = true;
+  if (modal) {
+    modal.setAttribute('hidden', '');
+    modal.style.display = 'none';
+  }
   document.body.style.overflow = '';
 }
 
-function openImagePickerSheet() {
-  const sheet = document.getElementById('image-picker-sheet');
-  if (sheet) sheet.hidden = false;
-  document.body.style.overflow = 'hidden';
-}
-
-function closeImagePickerSheet() {
-  const sheet = document.getElementById('image-picker-sheet');
-  if (sheet) sheet.hidden = true;
-  document.body.style.overflow = '';
-}
-
-async function handleScreenshotFile(file) {
+// Instant screenshot preview and persistent storage
+function handleScreenshotFile(file) {
   if (!file) return;
   const statusEl = document.getElementById('mission-submit-file-status');
   const previewEl = document.getElementById('mission-submit-preview');
   const removeBtn = document.getElementById('mission-submit-remove-img');
   const viewPreviewBtn = document.getElementById('btn-view-preview-modal');
-  try {
-    if (statusEl) statusEl.textContent = 'স্ক্রিনশট প্রসেসিং হচ্ছে...';
-    const base64 = await compressMissionScreenshot(file);
-    activeSubmissionImage = base64;
+
+  if (statusEl) statusEl.textContent = 'স্ক্রিনশট লোড হচ্ছে...';
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const rawDataUrl = evt.target && evt.target.result;
+    if (!rawDataUrl) return;
+
+    // Scale on canvas to save space in localStorage and load smoothly
+    const img = new Image();
+    img.onload = function() {
+      try {
+        const maxSide = 1200;
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (w > maxSide || h > maxSide) {
+          if (w > h) {
+            h = Math.round((h * maxSide) / w);
+            w = maxSide;
+          } else {
+            w = Math.round((w * maxSide) / h);
+            h = maxSide;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, w);
+        canvas.height = Math.max(1, h);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          applyScreenshot(compressed);
+          return;
+        }
+      } catch (e) {}
+      applyScreenshot(rawDataUrl);
+    };
+    img.onerror = function() {
+      applyScreenshot(rawDataUrl);
+    };
+    img.src = rawDataUrl;
+  };
+  reader.onerror = function() {
+    if (statusEl) statusEl.textContent = 'স্ক্রিনশট লোড করতে সমস্যা হয়েছে';
+  };
+  reader.readAsDataURL(file);
+
+  function applyScreenshot(src) {
+    activeSubmissionImage = src;
     if (previewEl) {
-      previewEl.innerHTML = `<img src="${base64}" alt="স্ক্রিনশট" class="h-full w-full object-cover rounded cursor-pointer" title="পূর্ণ স্ক্রিনশট প্রিভিউ দেখতে ক্লিক করুন">`;
+      previewEl.innerHTML = `<img src="${src}" alt="স্ক্রিনশট" class="h-full w-full object-cover rounded cursor-pointer" style="width:100%;height:100%;object-fit:cover;border-radius:6px;display:block;" title="পূর্ণ স্ক্রিনশট প্রিভিউ দেখতে ক্লিক করুন">`;
     }
     if (removeBtn) removeBtn.classList.remove('hidden');
-    if (viewPreviewBtn) viewPreviewBtn.classList.remove('hidden');
+    if (viewPreviewBtn) {
+      viewPreviewBtn.classList.remove('hidden');
+      viewPreviewBtn.style.display = 'inline-flex';
+    }
     if (statusEl) statusEl.textContent = '✓ স্ক্রিনশট সফলভাবে লোড হয়েছে';
-  } catch (err) {
-    if (statusEl) statusEl.textContent = 'স্ক্রিনশট আপলোড ব্যর্থ হয়েছে। আবার চেষ্টা করুন।';
   }
 }
 
@@ -1546,12 +2076,15 @@ function removeScreenshotImage() {
   const removeBtn = document.getElementById('mission-submit-remove-img');
   if (removeBtn) removeBtn.classList.add('hidden');
   const viewPreviewBtn = document.getElementById('btn-view-preview-modal');
-  if (viewPreviewBtn) viewPreviewBtn.classList.add('hidden');
+  if (viewPreviewBtn) {
+    viewPreviewBtn.classList.add('hidden');
+    viewPreviewBtn.style.display = 'none';
+  }
   const statusEl = document.getElementById('mission-submit-file-status');
   if (statusEl) statusEl.textContent = 'স্ক্রিনশট মুছে ফেলা হয়েছে';
 }
 
-// Setup screenshot upload listeners for camera, gallery and actions
+// 1. Direct camera input change
 const camInput = document.getElementById('mission-submit-camera-file');
 if (camInput) {
   camInput.addEventListener('change', function(e) {
@@ -1560,6 +2093,7 @@ if (camInput) {
   });
 }
 
+// 2. Direct gallery input change
 const galInput = document.getElementById('mission-submit-gallery-file');
 if (galInput) {
   galInput.addEventListener('change', function(e) {
@@ -1568,6 +2102,7 @@ if (galInput) {
   });
 }
 
+// 3. Fallback legacy input
 const legacyFileInput = document.getElementById('mission-submit-file');
 if (legacyFileInput) {
   legacyFileInput.addEventListener('change', function(e) {
@@ -1576,32 +2111,26 @@ if (legacyFileInput) {
   });
 }
 
-// Upload box click: opens lightbox if image already loaded, else opens picker sheet
+// Upload box clicked: if preview present, view lightbox; otherwise open gallery directly
 const uploadTriggerBtn = document.getElementById('mission-upload-trigger-btn');
 if (uploadTriggerBtn) {
-  uploadTriggerBtn.addEventListener('click', function() {
+  uploadTriggerBtn.addEventListener('click', function(e) {
+    e.preventDefault();
     if (activeSubmissionImage) {
       openScreenshotLightbox(activeSubmissionImage, 'আপলোডকৃত স্ক্রিনশট প্রিভিউ');
     } else {
-      openImagePickerSheet();
+      const gal = document.getElementById('mission-submit-gallery-file') || document.getElementById('mission-submit-file');
+      if (gal) gal.click();
     }
   });
 }
 
-// Direct button: Camera
-const btnCamera = document.getElementById('btn-open-camera');
-if (btnCamera) {
-  btnCamera.addEventListener('click', function() {
-    const cam = document.getElementById('mission-submit-camera-file');
-    if (cam) cam.click();
-  });
-}
-
-// Direct button: Gallery
-const btnGallery = document.getElementById('btn-open-gallery');
-if (btnGallery) {
-  btnGallery.addEventListener('click', function() {
-    const gal = document.getElementById('mission-submit-gallery-file');
+// Label clicked: also opens gallery directly
+const uploadLabel = document.getElementById('mission-upload-label');
+if (uploadLabel) {
+  uploadLabel.addEventListener('click', function(e) {
+    e.preventDefault();
+    const gal = document.getElementById('mission-submit-gallery-file') || document.getElementById('mission-submit-file');
     if (gal) gal.click();
   });
 }
@@ -1609,9 +2138,13 @@ if (btnGallery) {
 // Direct button: View Preview Modal
 const btnPreviewModal = document.getElementById('btn-view-preview-modal');
 if (btnPreviewModal) {
-  btnPreviewModal.addEventListener('click', function() {
+  btnPreviewModal.addEventListener('click', function(e) {
+    e.preventDefault();
     if (activeSubmissionImage) {
       openScreenshotLightbox(activeSubmissionImage, 'আপলোডকৃত স্ক্রিনশট প্রিভিউ');
+    } else {
+      const gal = document.getElementById('mission-submit-gallery-file') || document.getElementById('mission-submit-file');
+      if (gal) gal.click();
     }
   });
 }
@@ -1620,36 +2153,11 @@ if (btnPreviewModal) {
 const removeImgBtn = document.getElementById('mission-submit-remove-img');
 if (removeImgBtn) {
   removeImgBtn.addEventListener('click', function(e) {
+    e.preventDefault();
     e.stopPropagation();
     removeScreenshotImage();
   });
 }
-
-// Sheet option: Camera
-const sheetCamBtn = document.getElementById('sheet-choose-camera');
-if (sheetCamBtn) {
-  sheetCamBtn.addEventListener('click', function() {
-    closeImagePickerSheet();
-    const cam = document.getElementById('mission-submit-camera-file');
-    if (cam) cam.click();
-  });
-}
-
-// Sheet option: Gallery
-const sheetGalBtn = document.getElementById('sheet-choose-gallery');
-if (sheetGalBtn) {
-  sheetGalBtn.addEventListener('click', function() {
-    closeImagePickerSheet();
-    const gal = document.getElementById('mission-submit-gallery-file');
-    if (gal) gal.click();
-  });
-}
-
-// Sheet cancel buttons
-const sheetCancelBtn = document.getElementById('sheet-cancel');
-if (sheetCancelBtn) sheetCancelBtn.addEventListener('click', closeImagePickerSheet);
-const closeSheetBtn = document.getElementById('close-picker-sheet');
-if (closeSheetBtn) closeSheetBtn.addEventListener('click', closeImagePickerSheet);
 
 // Lightbox close buttons
 const closeLightboxBtn = document.getElementById('close-lightbox-btn');
@@ -1667,17 +2175,6 @@ if (lightboxModal) {
   });
 }
 
-// Close sheet on background click
-const imagePickerSheet = document.getElementById('image-picker-sheet');
-if (imagePickerSheet) {
-  imagePickerSheet.addEventListener('click', function(e) {
-    if (e.target === imagePickerSheet) {
-      closeImagePickerSheet();
-    }
-  });
-}
-
-
 // Comment char counter
 const commentInput = document.getElementById('mission-submit-comment');
 if (commentInput) {
@@ -1694,8 +2191,100 @@ if (cancelSubmitBtn) {
   });
 }
 
+// Package purchase modal listeners
+const confirmPurchaseBtn = document.getElementById('confirm-package-purchase-btn');
+if (confirmPurchaseBtn) {
+  confirmPurchaseBtn.addEventListener('click', confirmPackagePurchase);
+}
+
+const openDepositFromPurchaseBtn = document.getElementById('open-deposit-from-purchase-btn');
+if (openDepositFromPurchaseBtn) {
+  openDepositFromPurchaseBtn.addEventListener('click', function() {
+    pendingPurchaseLevel = currentPurchaseLevel;
+    closePackagePurchaseModal();
+    const pkg = packageData[currentPurchaseLevel];
+    const user = getCurrentUser();
+    const deficit = pkg ? Math.max(0, pkg.price - (Number(user.balance) || 0)) : 3500;
+    openDepositModal(deficit);
+  });
+}
+
+const closePurchaseModalBtn = document.getElementById('close-purchase-modal-btn');
+if (closePurchaseModalBtn) closePurchaseModalBtn.addEventListener('click', closePackagePurchaseModal);
+
+const cancelPurchaseModalBtn = document.getElementById('cancel-package-purchase-btn');
+if (cancelPurchaseModalBtn) cancelPurchaseModalBtn.addEventListener('click', closePackagePurchaseModal);
+
+const packagePurchaseModal = document.getElementById('package-purchase-modal');
+if (packagePurchaseModal) {
+  packagePurchaseModal.addEventListener('click', function(e) {
+    if (e.target === packagePurchaseModal) {
+      closePackagePurchaseModal();
+    }
+  });
+}
+
+// Deposit modal listeners
+const confirmDepositBtn = document.getElementById('confirm-deposit-btn');
+if (confirmDepositBtn) {
+  confirmDepositBtn.addEventListener('click', confirmDeposit);
+}
+
+const closeDepositModalBtn = document.getElementById('close-deposit-modal-btn');
+if (closeDepositModalBtn) closeDepositModalBtn.addEventListener('click', closeDepositModal);
+
+const cancelDepositModalBtn = document.getElementById('cancel-deposit-btn');
+if (cancelDepositModalBtn) cancelDepositModalBtn.addEventListener('click', closeDepositModal);
+
+const depositModal = document.getElementById('deposit-modal');
+if (depositModal) {
+  depositModal.addEventListener('click', function(e) {
+    if (e.target === depositModal) {
+      closeDepositModal();
+    }
+  });
+}
+
+// Quick deposit amount buttons
+document.querySelectorAll('.quick-deposit-amt').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    const amt = parseFloat(btn.dataset.amount || '0');
+    if (amt > 0) {
+      selectedDepositAmount = amt;
+      const customInput = document.getElementById('custom-deposit-amount');
+      if (customInput) customInput.value = amt;
+
+      document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
+        b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+        b.classList.add('bg-[#0e2a66]');
+      });
+      btn.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      btn.classList.remove('bg-[#0e2a66]');
+    }
+  });
+});
+
+const customDepositInput = document.getElementById('custom-deposit-amount');
+if (customDepositInput) {
+  customDepositInput.addEventListener('input', function() {
+    const val = parseFloat(customDepositInput.value);
+    if (!isNaN(val) && val > 0) {
+      selectedDepositAmount = val;
+      document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
+        if (parseFloat(b.dataset.amount || '0') === val) {
+          b.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+          b.classList.remove('bg-[#0e2a66]');
+        } else {
+          b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+          b.classList.add('bg-[#0e2a66]');
+        }
+      });
+    }
+  });
+}
+
 // Initial session check
-window.addEventListener('DOMContentLoaded', function() {
+function initApp() {
   let savedUser = null;
   try {
     savedUser = JSON.parse(localStorage.getItem('aloSignedInUser') || 'null');
@@ -1710,7 +2299,8 @@ window.addEventListener('DOMContentLoaded', function() {
       inviteCode: '728207',
       memberId: '1105',
       superiorId: '11',
-      packageLevel: 'LV1',
+      packageLevel: 'LV0',
+      purchasedPackages: ['LV0'],
       balance: 0.00
     };
     localStorage.setItem('aloSignedInUser', JSON.stringify(savedUser));
@@ -1719,12 +2309,29 @@ window.addEventListener('DOMContentLoaded', function() {
     if (!savedUser.inviteCode) savedUser.inviteCode = '728207';
     if (!savedUser.memberId) savedUser.memberId = '1105';
     if (!savedUser.superiorId) savedUser.superiorId = '11';
-    if (!savedUser.packageLevel) savedUser.packageLevel = 'LV1';
+    if (!savedUser.purchasedPackages) {
+      savedUser.purchasedPackages = ['LV0'];
+      if (savedUser.packageLevel && savedUser.packageLevel !== 'LV0' && savedUser.packageLevel !== 'LV1') {
+        savedUser.purchasedPackages.push(savedUser.packageLevel);
+      }
+    }
+    // As per user requirement: Free users only work on LV0. If not purchased, default to LV0
+    if (!savedUser.packageLevel || !savedUser.purchasedPackages.includes(savedUser.packageLevel)) {
+      savedUser.packageLevel = 'LV0';
+    }
     if (typeof savedUser.balance !== 'number') savedUser.balance = 0.00;
     localStorage.setItem('aloSignedInUser', JSON.stringify(savedUser));
   }
   updateUserDetails(savedUser);
   updateProfileMetrics();
+  updateVipHallRooms();
+  updateRecordsPanelPackages();
   openDashboardPanel('profile');
   showView('dashboard');
-});
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

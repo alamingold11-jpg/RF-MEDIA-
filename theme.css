@@ -43,7 +43,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 .dashboard-shell:has(#vip-panel:not([hidden])) > header {
@@ -55,7 +55,7 @@ html {
   isolation: isolate;
   overflow: hidden;
   min-height: calc(100vh - 9rem);
-  padding-top: clamp(12rem, 29vh, 18rem);
+  padding-top: 1rem;
   background-color: var(--color-profile-bg);
   background-image:
     radial-gradient(circle at 18% 9%, color-mix(in srgb, var(--color-profile-cyan) 20%, transparent), transparent 1.4rem),
@@ -138,7 +138,7 @@ html {
 
 @media (max-width: 380px) {
   .hall-screen {
-    padding-top: clamp(10rem, 24vh, 14rem);
+    padding-top: 0.75rem;
   }
 
   .hall-screen .hall-package {
