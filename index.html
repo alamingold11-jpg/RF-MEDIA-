@@ -3123,6 +3123,72 @@
       margin: 0;
     }
 
+    /* ---------- সাইটের কালার অনুযায়ী অ্যানিমেটেড অ্যাকশন ড্রয়ার / শিট সিস্টেম (কোনো পপ-আপ নয়) ---------- */
+    .site-action-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: radial-gradient(circle at 50% 30%, rgba(18, 100, 201, 0.32), rgba(7, 27, 80, 0.92) 75%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .site-action-backdrop.is-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .site-action-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10001;
+      max-width: 460px;
+      margin: 0 auto;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, #0e2764 0%, #071b50 100%);
+      border-top: 2px solid var(--color-profile-cyan);
+      border-left: 1px solid var(--color-profile-border);
+      border-right: 1px solid var(--color-profile-border);
+      border-top-left-radius: 1.75rem;
+      border-top-right-radius: 1.75rem;
+      box-shadow: 0 -12px 40px rgba(7, 27, 80, 0.95), 0 0 25px rgba(53, 198, 231, 0.25);
+      color: var(--color-profile-text);
+      transform: translateY(100%);
+      transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .site-action-sheet.is-active {
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .sheet-handle {
+      width: 3rem;
+      height: 0.3rem;
+      border-radius: 9999px;
+      background: rgba(53, 198, 231, 0.45);
+      margin: 0.65rem auto 0.25rem;
+      transition: background 200ms ease;
+    }
+    .sheet-handle:hover {
+      background: var(--color-profile-cyan);
+    }
+    @keyframes site-glow-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(53, 198, 231, 0.45);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(53, 198, 231, 0);
+      }
+    }
+    .glow-pulse-cyan {
+      animation: site-glow-pulse 2.2s infinite;
+    }
     @media (max-width: 420px) {
       #login-view > div > section {
         padding-inline: 1rem;
@@ -3325,7 +3391,7 @@
               </span>
               <label class="sr-only" for="register-phone">ফোন নম্বর</label>
               <span class="phone-register-prefix">+880 <span class="phone-register-prefix-arrow" aria-hidden="true">▼</span></span>
-              <input id="register-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="ফোন নম্বর" maxlength="10" required>
+              <input id="register-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="ফোন নম্বর" maxlength="11" required>
             </div>
 
             <div class="phone-register-row phone-register-code-row">
@@ -4444,6 +4510,47 @@
               </button>
             </div>
 
+            <!-- In-Page Animated Recharge Drawer (Site Colors, No Popup) -->
+            <div id="inline-recharge-drawer" class="rounded-2xl border border-[#123b8d] shadow-2xl overflow-hidden transition-all duration-300" style="background: linear-gradient(135deg, #071b50 0%, #0c2364 100%);">
+              <div class="p-4 space-y-3.5">
+                <div class="flex items-center justify-between border-b border-[#123b8d]/70 pb-2.5">
+                  <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                    <span class="text-[#35c6e7]">💳</span> <span>ব্যালেন্স রিচার্জ (জমা)</span>
+                  </h3>
+                  <button type="button" id="close-inline-recharge-btn" class="text-slate-400 hover:text-white p-1 text-xs cursor-pointer">
+                    ✕ বন্ধ করুন
+                  </button>
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1 text-[11px]">রিচার্জের পরিমাণ নির্বাচন করুন:</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="1000">+১,০০০</button>
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="3500">+৩,৫০০ (LV1)</button>
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="7500">+৭,৫০০ (LV2)</button>
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="10000">+১০,০০০</button>
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="36000">+৩৬,০০০ (LV3)</button>
+                    <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="84000">+৮৪,০০০ (LV4)</button>
+                  </div>
+                </div>
+                <div>
+                  <label for="custom-deposit-amount" class="block text-slate-300 font-semibold mb-1 text-[11px]">অথবা নির্দিষ্ট পরিমাণ (BDT):</label>
+                  <input type="number" id="custom-deposit-amount" placeholder="উদাঃ ৩৫০০" class="w-full bg-[#050f28] border border-[#162e66] rounded-lg p-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#35c6e7]">
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1 text-[11px]">পেমেন্ট মেথড:</label>
+                  <div class="grid grid-cols-3 gap-2 text-center text-[10px]">
+                    <span class="py-1 px-1 rounded bg-[#e2136e]/20 text-[#e2136e] font-bold border border-[#e2136e]/40">বিকাশ (bKash)</span>
+                    <span class="py-1 px-1 rounded bg-[#f7931e]/20 text-[#f7931e] font-bold border border-[#f7931e]/40">নগদ (Nagad)</span>
+                    <span class="py-1 px-1 rounded bg-[#26a17b]/20 text-[#26a17b] font-bold border border-[#26a17b]/40">USDT / ক্রিপ্টো</span>
+                  </div>
+                </div>
+                <p id="deposit-status-message" class="text-center font-bold text-xs min-h-4 text-[#38bdf8]"></p>
+                <button type="button" id="confirm-deposit-btn" class="w-full py-2.5 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow">
+                  রিচার্জ সম্পন্ন করুন ⚡
+                </button>
+              </div>
+            </div>
+
             <!-- LV0: Free Package -->
             <article class="dashboard-card overflow-hidden p-4 relative" data-record-package="LV0" style="border-color: #1e3a8a; background: linear-gradient(120deg, #0e2764, #08173d); color: var(--color-primary-contrast); box-shadow: 0 8px 24px rgba(14,39,100,0.3);">
               <div class="flex items-start justify-between gap-3">
@@ -4642,12 +4749,18 @@
           </section>
 
           <section id="platform-tasks-panel" class="dashboard-panel -mx-4 -mt-4 min-h-[calc(100vh-4rem)]" aria-label="TikTok মিশন" hidden>
-            <header class="sticky top-0 z-10 flex items-center justify-between border-b px-4 py-4" style="border-color: var(--color-profile-border); background: var(--color-profile-blue); color: var(--color-primary-contrast);">
-              <button type="button" class="personal-header-action" data-panel="vip" aria-label="মিশন হলে ফিরে যান">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+            <header class="sticky top-0 z-20 flex items-center justify-between border-b px-3 py-3 shadow-md" style="border-color: var(--color-profile-border); background: var(--color-profile-blue); color: var(--color-primary-contrast);">
+              <button type="button" class="personal-header-action flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer text-xs font-bold active:scale-95" data-panel="vip" aria-label="ফিরে যান">
+                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                <span>ফিরে যান</span>
               </button>
-              <h2 class="text-base font-bold">মিশন</h2>
-              <span class="w-10" aria-hidden="true"></span>
+              <h2 class="text-sm font-bold flex items-center gap-1.5">
+                <span>📋</span> <span id="platform-task-header-level">মিশন স্তর</span>
+              </h2>
+              <button type="button" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/25 hover:bg-red-500/40 text-red-100 border border-red-400/40 text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm" data-panel="vip" aria-label="কেটে দিন" title="কেটে দিন">
+                <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>কেটে দিন</span>
+              </button>
             </header>
             <div class="px-4 pb-8">
               <div class="border-b px-1 py-4" style="border-color: var(--color-profile-border);">
@@ -4872,7 +4985,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <script src="/app.js"></script>
   <!-- Global Screenshot Lightbox / Preview Modal -->
   <div id="screenshot-lightbox-modal" class="fixed inset-0 z-[10000] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
     <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -4901,88 +5013,105 @@
     </div>
   </div>
 
-  <!-- Package Purchase Modal -->
-  <div id="package-purchase-modal" class="fixed inset-0 z-[10000] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
-    <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-4 py-3 border-b border-[#14285c] bg-[#05112e]">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <span>💎</span> <span id="purchase-modal-title">প্যাকেজ ক্রয় ও আপগ্রেড</span>
-        </h3>
-        <button type="button" id="close-purchase-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer" aria-label="বন্ধ করুন">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+  <!-- Site-Themed Animated Action Sheet & Backdrop (No Intrusive Popups) -->
+  <div id="alo-action-backdrop" class="site-action-backdrop" aria-hidden="true"></div>
+
+  <div id="alo-action-sheet" class="site-action-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-header-title">
+    <!-- Top Grab Handle (Click to Dismiss) -->
+    <div class="sheet-handle cursor-pointer" data-close-sheet="true" title="বন্ধ করতে চাপুন" aria-label="বন্ধ করুন"></div>
+
+    <!-- Header with Site Colors -->
+    <div class="flex items-center justify-between px-4 pt-1 pb-3 border-b border-[#123b8d]/70 bg-[#061847]/80">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#35c6e7]/15 text-[#35c6e7] text-sm">
+          💎
+        </span>
+        <div>
+          <h3 id="sheet-header-title" class="text-sm font-bold text-white tracking-wide">প্যাকেজ ও ব্যালেন্স ম্যানেজমেন্ট</h3>
+          <p class="text-[10px] text-slate-300">ফ্রিতে শুধু LV0 · বাকি কাজের জন্য ব্যালেন্স প্রয়োজন</p>
+        </div>
+      </div>
+      <button type="button" id="close-action-sheet-btn" data-close-sheet="true" class="p-2 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition active:scale-90 cursor-pointer" aria-label="বন্ধ করুন">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Animated Tab Switcher (Site Colors) -->
+    <div class="px-4 pt-3 pb-1">
+      <div class="grid grid-cols-2 p-1 bg-[#040e29] rounded-xl border border-[#123b8d]/80 text-xs font-bold">
+        <button type="button" id="sheet-tab-purchase" class="py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-[#1264c9] text-white shadow cursor-pointer">
+          <span>💎</span> <span>প্যাকেজ ক্রয়</span>
+        </button>
+        <button type="button" id="sheet-tab-deposit" class="py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-white cursor-pointer">
+          <span>💳</span> <span>ব্যালেন্স রিচার্জ</span>
         </button>
       </div>
-      <!-- Body -->
-      <div class="p-4 space-y-4 overflow-y-auto">
-        <div class="text-center py-3 px-3 bg-[#0c1f4d] rounded-xl border border-[#1b3b80]">
-          <span id="purchase-modal-badge" class="inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-500/20 text-[#38bdf8] mb-1">LV1</span>
-          <p class="text-2xl font-black text-white"><span id="purchase-modal-price">৩,৫০০</span> <span class="text-sm font-bold text-[#38bdf8]">BDT</span></p>
-          <p id="purchase-modal-details" class="text-xs text-slate-300 mt-1">দৈনিক ৬টি কাজ · প্রতি কাজের আয় ৩০.০০ BDT</p>
+    </div>
+
+    <!-- Sheet Content Body (Scrollable) -->
+    <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+      
+      <!-- VIEW 1: PACKAGE PURCHASE VIEW -->
+      <div id="sheet-purchase-view" class="space-y-3.5">
+        <!-- Package Hero Card -->
+        <div class="text-center py-3.5 px-3 rounded-2xl border border-[#1b439e] shadow-lg relative overflow-hidden" style="background: linear-gradient(135deg, #0e2a6d 0%, #071b50 100%);">
+          <div class="inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-[#35c6e7]/20 text-[#35c6e7] border border-[#35c6e7]/40 mb-1.5 glow-pulse-cyan">
+            <span id="purchase-modal-badge">LV1 · বেসিক প্যাকেজ</span>
+          </div>
+          <p class="text-2xl font-black text-white mt-1">
+            <span id="purchase-modal-price">৩,৫০০</span> <span class="text-xs font-bold text-[#35c6e7]">BDT</span>
+          </p>
+          <p id="purchase-modal-details" class="text-[11px] text-slate-300 mt-1">
+            দৈনিক ৬টি কাজ · প্রতি কাজের আয় ৩০.০০ BDT
+          </p>
         </div>
 
-        <div class="bg-[#050f28] rounded-xl p-3.5 border border-[#14285c] space-y-2 text-xs">
+        <!-- User Level & Balance Stats -->
+        <div class="bg-[#050f28] rounded-xl p-3 border border-[#14285c] space-y-2 text-xs">
           <div class="flex items-center justify-between">
             <span class="text-slate-400">আপনার বর্তমান স্তর:</span>
-            <span id="purchase-modal-user-level" class="font-bold text-white">LV0 (ফ্রি)</span>
+            <span id="purchase-modal-user-level" class="font-bold text-[#35c6e7]">LV0 (ফ্রি)</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-slate-400">আপনার বর্তমান ব্যালেন্স:</span>
             <span class="font-bold text-[#34d399]"><span id="purchase-modal-user-balance">০.০০</span> BDT</span>
           </div>
           <div class="flex items-center justify-between border-t border-[#14285c] pt-2">
-            <span class="text-slate-400">প্রয়োজনীয় মূল্য:</span>
-            <span id="purchase-modal-cost" class="font-bold text-amber-400">৩,৫০০.০০ BDT</span>
+            <span class="text-slate-400">প্যাকেজ মূল্য:</span>
+            <span id="purchase-modal-cost" class="font-bold text-amber-300">৩,৫০০.০০ BDT</span>
           </div>
         </div>
 
-        <div id="purchase-modal-status-box" class="p-3 rounded-lg text-xs leading-5">
-          <!-- Dynamic message based on balance sufficiency -->
+        <!-- Dynamic Status Card -->
+        <div id="purchase-modal-status-box" class="p-3 rounded-xl text-xs leading-5">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+        <!-- Purchase Action Buttons -->
+        <div class="space-y-2 pt-1">
+          <button type="button" id="confirm-package-purchase-btn" class="w-full py-3 rounded-xl bg-[#1264c9] hover:bg-[#1877f2] text-white text-xs font-bold transition shadow-lg cursor-pointer active:scale-95 flex items-center justify-center gap-2">
+            <span>💎</span> <span>ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন</span>
+          </button>
+          <button type="button" id="open-deposit-from-purchase-btn" class="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition shadow cursor-pointer active:scale-95 hidden flex items-center justify-center gap-2">
+            <span>+</span> <span>ব্যালেন্স রিচার্জ ট্যাবে যান</span>
+          </button>
         </div>
       </div>
-      <!-- Footer actions -->
-      <div class="p-3 border-t border-[#14285c] bg-[#05112e] flex flex-col gap-2">
-        <button type="button" id="confirm-package-purchase-btn" class="w-full py-2.5 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow">
-          ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন
-        </button>
-        <button type="button" id="open-deposit-from-purchase-btn" class="w-full py-2 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow hidden">
-          + ব্যালেন্স রিচার্জ / জমা করুন
-        </button>
-        <button type="button" id="cancel-package-purchase-btn" class="w-full py-1 text-xs text-slate-400 hover:text-white transition text-center cursor-pointer">
-          বাতিল করুন
-        </button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Deposit / Recharge Modal -->
-  <div id="deposit-modal" class="fixed inset-0 z-[10001] items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-opacity duration-200" style="display: none;" hidden aria-modal="true" role="dialog">
-    <div class="relative max-w-sm w-full bg-[#08173d] border border-[#14285c] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-4 py-3 border-b border-[#14285c] bg-[#05112e]">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <span>💳</span> ব্যালেন্স রিচার্জ (জমা)
-        </h3>
-        <button type="button" id="close-deposit-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer" aria-label="বন্ধ করুন">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <!-- Body -->
-      <div class="p-4 space-y-3 overflow-y-auto text-xs">
+      <!-- VIEW 2: DEPOSIT / RECHARGE VIEW -->
+      <div id="sheet-deposit-view" class="space-y-3.5 hidden">
         <div class="flex items-center justify-between bg-[#050f28] p-3 rounded-xl border border-[#14285c]">
-          <span class="text-slate-400">বর্তমান ব্যালেন্স:</span>
+          <span class="text-slate-400 text-xs">আপনার বর্তমান ব্যালেন্স:</span>
           <span class="text-sm font-black text-[#34d399]"><span id="deposit-current-balance">০.০০</span> BDT</span>
         </div>
 
         <div>
-          <label class="block text-slate-300 font-semibold mb-1.5">রিচার্জের পরিমাণ নির্বাচন করুন:</label>
+          <label class="block text-slate-300 font-semibold mb-1.5 text-xs">রিচার্জের পরিমাণ নির্বাচন করুন:</label>
           <div class="grid grid-cols-3 gap-2">
             <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="1000">+১,০০০</button>
-            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="3500">+৩,৫০০ (LV1)</button>
+            <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#1264c9] ring-2 ring-[#35c6e7] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="3500">+৩,৫০০ (LV1)</button>
             <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="7500">+৭,৫০০ (LV2)</button>
             <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="10000">+১০,০০০</button>
             <button type="button" class="quick-deposit-amt py-2 px-1 rounded-lg bg-[#0e2a66] hover:bg-[#133785] border border-[#1b3e85] text-white font-bold text-xs transition cursor-pointer text-center" data-amount="36000">+৩৬,০০০ (LV3)</button>
@@ -4991,32 +5120,36 @@
         </div>
 
         <div>
-          <label for="custom-deposit-amount" class="block text-slate-300 font-semibold mb-1">অথবা নির্দিষ্ট পরিমাণ (BDT):</label>
-          <input type="number" id="custom-deposit-amount" placeholder="উদাঃ ৩৫০০" class="w-full bg-[#050f28] border border-[#162e66] rounded-lg p-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#1877f2]">
+          <label for="custom-deposit-amount" class="block text-slate-300 font-semibold mb-1 text-xs">অথবা নির্দিষ্ট পরিমাণ (BDT):</label>
+          <input type="number" id="custom-deposit-amount" placeholder="উদাঃ ৩৫০০" class="w-full bg-[#050f28] border border-[#162e66] rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#35c6e7] transition">
         </div>
 
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">পেমেন্ট মেথড:</label>
-          <div class="grid grid-cols-3 gap-2 text-center text-[11px]">
+          <label class="block text-slate-300 font-semibold mb-1 text-xs">পেমেন্ট মেথড:</label>
+          <div class="grid grid-cols-3 gap-2 text-center text-[10px]">
             <span class="py-1.5 px-2 rounded-lg bg-[#e2136e]/20 text-[#e2136e] font-bold border border-[#e2136e]/40">বিকাশ (bKash)</span>
             <span class="py-1.5 px-2 rounded-lg bg-[#f7931e]/20 text-[#f7931e] font-bold border border-[#f7931e]/40">নগদ (Nagad)</span>
             <span class="py-1.5 px-2 rounded-lg bg-[#26a17b]/20 text-[#26a17b] font-bold border border-[#26a17b]/40">USDT / ক্রিপ্টো</span>
           </div>
         </div>
 
-        <p id="deposit-status-message" class="text-center font-bold text-xs min-h-4 text-[#38bdf8]"></p>
-      </div>
-      <!-- Footer actions -->
-      <div class="p-3 border-t border-[#14285c] bg-[#05112e] flex flex-col gap-2">
-        <button type="button" id="confirm-deposit-btn" class="w-full py-2.5 rounded-lg bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow">
-          রিচার্জ সম্পন্ন করুন ⚡
-        </button>
-        <button type="button" id="cancel-deposit-btn" class="w-full py-1 text-xs text-slate-400 hover:text-white transition text-center cursor-pointer">
-          বাতিল করুন
+        <p id="deposit-status-message" class="text-center font-bold text-xs min-h-4 text-[#35c6e7]"></p>
+
+        <button type="button" id="confirm-deposit-btn" class="w-full py-3 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow-lg flex items-center justify-center gap-2">
+          <span>⚡</span> <span>রিচার্জ সম্পন্ন করুন</span>
         </button>
       </div>
+
+    </div>
+
+    <!-- Sheet Bottom Dismiss -->
+    <div class="p-3 border-t border-[#123b8d]/70 bg-[#061847]/90 text-center">
+      <button type="button" id="sheet-close-text-btn" data-close-sheet="true" class="w-full py-2 text-xs font-bold text-slate-300 hover:text-white transition active:scale-95 cursor-pointer rounded-lg bg-white/5 hover:bg-white/10">
+        বন্ধ করুন
+      </button>
     </div>
   </div>
 
+  <script src="/app.js"></script>
   </body>
 </html>

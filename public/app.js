@@ -342,6 +342,7 @@ if (loginForm) {
     const message = document.getElementById('login-message');
     const phoneInput = document.getElementById('login-email').value.trim();
     const phoneDigits = phoneInput.replace(/\D/g, '');
+    const cleanDigits = phoneDigits.startsWith('880') ? phoneDigits.slice(3) : phoneDigits;
     const loginPhone = phoneDigits.startsWith('880')
       ? '+' + phoneDigits
       : (phoneDigits.length === 10 ? '+880' + phoneDigits : '+' + phoneDigits);
@@ -351,8 +352,9 @@ if (loginForm) {
     try {
       const accounts = JSON.parse(localStorage.getItem('aloAccounts') || '[]');
       const account = accounts.find(function(item) {
-        const savedPhone = String(item.phone || item.email || '').replace(/\D/g, '');
-        return savedPhone === phoneDigits || savedPhone === loginPhone.replace(/\D/g, '');
+        const savedPhone = String(item.phone || item.accountNumber || item.email || '').replace(/\D/g, '');
+        const savedClean = savedPhone.startsWith('880') ? savedPhone.slice(3) : savedPhone;
+        return savedPhone === phoneDigits || savedClean === cleanDigits || savedPhone === loginPhone.replace(/\D/g, '');
       });
       const passwordHash = await hashPassword(password);
       if (!account || account.passwordHash !== passwordHash) {
@@ -363,11 +365,19 @@ if (loginForm) {
       if (!account.memberId) account.memberId = 'AL' + Date.now().toString().slice(-8);
       if (!account.inviteCode) account.inviteCode = 'AL' + Math.random().toString(36).slice(2, 7).toUpperCase();
       localStorage.setItem('aloAccounts', JSON.stringify(accounts));
+
+      const regNumber = account.accountNumber || account.phone || cleanDigits || phoneInput;
       const signedInUser = {
-        name: account.name,
-        email: account.email,
+        name: account.name || 'সদস্য',
+        phone: regNumber,
+        accountNumber: regNumber,
+        email: account.email || loginPhone,
         memberId: account.memberId,
         inviteCode: account.inviteCode,
+        superiorId: account.superiorId || '11',
+        packageLevel: account.packageLevel || 'LV0',
+        purchasedPackages: account.purchasedPackages || ['LV0'],
+        balance: typeof account.balance === 'number' ? account.balance : 0.00,
         profileData: account.profileData || {}
       };
       localStorage.setItem('aloSignedInUser', JSON.stringify(signedInUser));
@@ -393,7 +403,7 @@ function showRegistrationSuccess(phone) {
         <path d="M34 57 L49 72 L77 40"></path>
       </svg>
       <h2>নিবন্ধন সফল!</h2>
-      <p>আপনার অ্যাকাউন্ট তৈরি হয়েছে। এখন লগইন করুন।</p>
+      <p>আপনার অ্যাকাউন্ট তৈরি হয়েছে (হিসাব: <strong>${phone}</strong>)। এখন লগইন করুন।</p>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -403,7 +413,7 @@ function showRegistrationSuccess(phone) {
     if (loginEmail) loginEmail.value = phone;
     showView('login');
     const loginMsg = document.getElementById('login-message');
-    if (loginMsg) loginMsg.textContent = 'নিবন্ধন সফল। আপনার ফোন নম্বর ও পাসওয়ার্ড দিয়ে লগইন করুন।';
+    if (loginMsg) loginMsg.textContent = 'নিবন্ধন সফল। আপনার ফোন নম্বর (' + phone + ') ও পাসওয়ার্ড দিয়ে লগইন করুন।';
     overlay.remove();
   }, 1800);
 }
@@ -415,8 +425,12 @@ if (registerForm) {
   registerForm.addEventListener('submit', async function(event) {
     event.preventDefault();
     const message = document.getElementById('register-message');
-    const phone = document.getElementById('register-phone').value.trim();
-    const fullPhone = '+880' + phone;
+    const phoneInput = document.getElementById('register-phone').value.trim();
+    let cleanPhone = phoneInput.replace(/\D/g, '');
+    if (cleanPhone.startsWith('880')) {
+      cleanPhone = cleanPhone.slice(3);
+    }
+    const fullPhone = '+880' + (cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone);
     const smsCode = document.getElementById('register-sms-code').value.trim();
     const password = document.getElementById('register-password').value;
     const confirmation = document.getElementById('confirm-password');
@@ -428,8 +442,8 @@ if (registerForm) {
     }
     confirmation.setCustomValidity('');
 
-    if (!/^1[3-9]\d{8}$/.test(phone)) {
-      if (message) message.textContent = 'সঠিক ১০ সংখ্যার বাংলাদেশি ফোন নম্বর লিখুন।';
+    if (!/^0?1[3-9]\d{8}$/.test(cleanPhone)) {
+      if (message) message.textContent = 'সঠিক বাংলাদেশি ফোন নম্বর লিখুন (উদাঃ 017xxxxxxxx বা 17xxxxxxxx)।';
       return;
     }
     if (!smsCode) {
@@ -442,14 +456,17 @@ if (registerForm) {
     }
 
     try {
+      const registeredNumber = cleanPhone;
       const accounts = JSON.parse(localStorage.getItem('aloAccounts') || '[]');
       const existingAccount = accounts.find(function(account) {
-        return String(account.phone || '').replace(/\D/g, '') === fullPhone.replace(/\D/g, '');
+        const savedDigits = String(account.phone || account.accountNumber || account.email || '').replace(/\D/g, '');
+        const savedClean = savedDigits.startsWith('880') ? savedDigits.slice(3) : savedDigits;
+        return savedClean === cleanPhone || savedDigits === fullPhone.replace(/\D/g, '');
       });
       if (existingAccount) {
         if (message) message.textContent = 'এই নম্বরে আগে থেকেই অ্যাকাউন্ট আছে। লগইন পেজে যান।';
         const loginEmail = document.getElementById('login-email');
-        if (loginEmail) loginEmail.value = fullPhone;
+        if (loginEmail) loginEmail.value = registeredNumber;
         showView('login');
         return;
       }
@@ -458,16 +475,39 @@ if (registerForm) {
       const inviteCodeInput = document.getElementById('register-invite-code');
       const account = {
         name: 'সদস্য',
-        phone: fullPhone,
+        phone: registeredNumber,
+        accountNumber: registeredNumber,
         email: fullPhone,
         passwordHash: passwordHash,
         memberId: 'AL' + Date.now().toString().slice(-8),
         inviteCode: (inviteCodeInput ? inviteCodeInput.value.trim() : '') || 'AL' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+        superiorId: '11',
+        packageLevel: 'LV0',
+        purchasedPackages: ['LV0'],
+        balance: 0.00,
         profileData: {}
       };
       accounts.push(account);
       localStorage.setItem('aloAccounts', JSON.stringify(accounts));
-      showRegistrationSuccess(fullPhone);
+
+      // Set registered account as active signed in user
+      const signedInUser = {
+        name: account.name,
+        phone: registeredNumber,
+        accountNumber: registeredNumber,
+        email: fullPhone,
+        memberId: account.memberId,
+        inviteCode: account.inviteCode,
+        superiorId: '11',
+        packageLevel: 'LV0',
+        purchasedPackages: ['LV0'],
+        balance: 0.00,
+        profileData: {}
+      };
+      localStorage.setItem('aloSignedInUser', JSON.stringify(signedInUser));
+      updateUserDetails(signedInUser);
+
+      showRegistrationSuccess(registeredNumber);
     } catch (error) {
       if (message) message.textContent = 'অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।';
     }
@@ -480,9 +520,13 @@ if (sendSmsBtn) {
     const phoneInput = document.getElementById('register-phone');
     const phone = phoneInput ? phoneInput.value.trim() : '';
     const message = document.getElementById('register-message');
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('880')) {
+      cleanPhone = cleanPhone.slice(3);
+    }
 
-    if (!/^1[3-9]\d{8}$/.test(phone)) {
-      if (message) message.textContent = 'ডেমো কোড পেতে সঠিক ১০ সংখ্যার বাংলাদেশি ফোন নম্বর লিখুন।';
+    if (!/^0?1[3-9]\d{8}$/.test(cleanPhone)) {
+      if (message) message.textContent = 'ডেমো কোড পেতে সঠিক বাংলাদেশি ফোন নম্বর লিখুন (উদাঃ 017xxxxxxxx বা 17xxxxxxxx)।';
       if (phoneInput) phoneInput.focus();
       return;
     }
@@ -523,19 +567,36 @@ function getCurrentUser() {
   } catch (e) {
     user = null;
   }
+
+  let accounts = [];
+  try {
+    accounts = JSON.parse(localStorage.getItem('aloAccounts') || '[]');
+  } catch (e) {
+    accounts = [];
+  }
+  const latestAccount = accounts.length > 0 ? accounts[accounts.length - 1] : null;
+
   if (!user) {
+    const regPhone = latestAccount ? (latestAccount.accountNumber || latestAccount.phone || '1735235999') : '1735235999';
     user = {
-      name: 'সদস্য',
-      phone: '1735235999',
-      accountNumber: '1735235999',
-      inviteCode: '728207',
-      memberId: '1105',
+      name: (latestAccount && latestAccount.name) || 'সদস্য',
+      phone: regPhone,
+      accountNumber: regPhone,
+      inviteCode: (latestAccount && latestAccount.inviteCode) || '728207',
+      memberId: (latestAccount && latestAccount.memberId) || '1105',
       superiorId: '11',
-      packageLevel: 'LV0',
-      purchasedPackages: ['LV0'],
-      balance: 0.00
+      packageLevel: (latestAccount && latestAccount.packageLevel) || 'LV0',
+      purchasedPackages: (latestAccount && latestAccount.purchasedPackages) || ['LV0'],
+      balance: (latestAccount && typeof latestAccount.balance === 'number') ? latestAccount.balance : 0.00
     };
     localStorage.setItem('aloSignedInUser', JSON.stringify(user));
+  } else {
+    // If user registered an account, ensure their registered phone number is shown
+    if (latestAccount && (user.accountNumber === '1735235999' || !user.accountNumber)) {
+      user.accountNumber = latestAccount.accountNumber || latestAccount.phone || user.accountNumber;
+      user.phone = latestAccount.phone || latestAccount.accountNumber || user.phone;
+      localStorage.setItem('aloSignedInUser', JSON.stringify(user));
+    }
   }
   return user;
 }
@@ -639,6 +700,73 @@ function updateRecordsPanelPackages() {
   });
 }
 
+function switchSheetTab(tabName) {
+  const purchaseTabBtn = document.getElementById('sheet-tab-purchase');
+  const depositTabBtn = document.getElementById('sheet-tab-deposit');
+  const purchaseView = document.getElementById('sheet-purchase-view');
+  const depositView = document.getElementById('sheet-deposit-view');
+
+  if (tabName === 'deposit') {
+    if (depositTabBtn) {
+      depositTabBtn.className = 'py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-[#10b981] text-white shadow font-bold cursor-pointer';
+    }
+    if (purchaseTabBtn) {
+      purchaseTabBtn.className = 'py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-white font-bold cursor-pointer';
+    }
+    if (depositView) depositView.classList.remove('hidden');
+    if (purchaseView) purchaseView.classList.add('hidden');
+  } else {
+    if (purchaseTabBtn) {
+      purchaseTabBtn.className = 'py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-[#1264c9] text-white shadow font-bold cursor-pointer';
+    }
+    if (depositTabBtn) {
+      depositTabBtn.className = 'py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-white font-bold cursor-pointer';
+    }
+    if (purchaseView) purchaseView.classList.remove('hidden');
+    if (depositView) depositView.classList.add('hidden');
+  }
+}
+
+function openActionSheet() {
+  const backdrop = document.getElementById('alo-action-backdrop');
+  const sheet = document.getElementById('alo-action-sheet');
+  if (backdrop) {
+    backdrop.classList.add('is-active');
+    backdrop.style.display = 'block';
+  }
+  if (sheet) {
+    sheet.classList.add('is-active');
+    sheet.style.display = 'flex';
+  }
+}
+
+function closeActionSheet() {
+  const backdrop = document.getElementById('alo-action-backdrop');
+  const sheet = document.getElementById('alo-action-sheet');
+  if (backdrop) {
+    backdrop.classList.remove('is-active');
+    setTimeout(function() {
+      if (!backdrop.classList.contains('is-active')) {
+        backdrop.style.display = 'none';
+      }
+    }, 320);
+  }
+  if (sheet) {
+    sheet.classList.remove('is-active');
+    setTimeout(function() {
+      if (!sheet.classList.contains('is-active')) {
+        sheet.style.display = 'none';
+      }
+    }, 380);
+  }
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeActionSheet();
+  }
+});
+
 function openPackagePurchaseModal(level, alertNotice) {
   if (!packageData[level] || level === 'LV0') return;
   currentPurchaseLevel = level;
@@ -648,11 +776,8 @@ function openPackagePurchaseModal(level, alertNotice) {
   const price = pkg.price;
   const isSufficient = userBal >= price;
 
-  const modal = document.getElementById('package-purchase-modal');
-  if (!modal) return;
-
-  const titleEl = document.getElementById('purchase-modal-title');
-  if (titleEl) titleEl.textContent = `${level} প্যাকেজ ক্রয় ও আপগ্রেড`;
+  const titleEl = document.getElementById('sheet-header-title');
+  if (titleEl) titleEl.textContent = `${level} প্যাকেজ ক্রয় ও ব্যালেন্স`;
 
   const badgeEl = document.getElementById('purchase-modal-badge');
   if (badgeEl) badgeEl.textContent = `${level} · ${pkg.name}`;
@@ -681,26 +806,26 @@ function openPackagePurchaseModal(level, alertNotice) {
 
   if (statusBox) {
     if (isSufficient) {
-      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-emerald-950/70 border border-emerald-500/50 text-emerald-200';
+      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-[#051c4a] border border-[#34d399]/40 text-[#34d399] shadow';
       statusBox.innerHTML = `
         <div class="flex items-start gap-2">
-          <span class="text-base text-emerald-400">✓</span>
+          <span class="text-base text-[#34d399] font-bold">✓</span>
           <div>
-            <p class="font-bold text-emerald-300">পর্যাপ্ত ব্যালেন্স বিদ্যমান রয়েছে</p>
-            <p class="mt-0.5 text-slate-300">আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স আছে। নিচে 'ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন' বাটনে ক্লিক করে প্যাকেজটি এখনই চালু করুন।</p>
+            <p class="font-bold text-white">পর্যাপ্ত ব্যালেন্স বিদ্যমান রয়েছে</p>
+            <p class="mt-0.5 text-slate-300">আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স আছে। নিচে 'ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করুন' বাটনে চাপ দিয়ে এখনই প্যাকেজটি চালু করুন।</p>
           </div>
         </div>
       `;
     } else {
       const deficit = price - userBal;
-      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-amber-950/80 border border-amber-500/50 text-amber-200';
+      statusBox.className = 'p-3 rounded-xl text-xs leading-5 bg-[#211504] border border-amber-500/50 text-amber-200 shadow';
       statusBox.innerHTML = `
         <div class="flex items-start gap-2">
-          <span class="text-base text-amber-400">⚠️</span>
+          <span class="text-base text-amber-400 font-bold">⚠️</span>
           <div>
             <p class="font-bold text-amber-300">ফ্রিতে শুধু LV0 কাজ করতে পারবেন!</p>
-            <p class="mt-0.5 text-slate-300">${alertNotice || `${level} প্যাকেজের কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।`}</p>
-            <p class="mt-1 font-semibold text-amber-300">আপনার আরও <strong class="text-white">${formatMoney(deficit)} BDT</strong> ব্যালেন্স রিচার্জ (জমা) করতে হবে।</p>
+            <p class="mt-0.5 text-slate-300 text-[11px] leading-4">${alertNotice || `${level} প্যাকেজের কাজ করতে ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।`}</p>
+            <p class="mt-1.5 font-bold text-amber-300">আপনার আরও <strong class="text-white">${formatMoney(deficit)} BDT</strong> ব্যালেন্স রিচার্জ (জমা) করতে হবে।</p>
           </div>
         </div>
       `;
@@ -710,12 +835,12 @@ function openPackagePurchaseModal(level, alertNotice) {
   if (confirmBtn) {
     if (isSufficient) {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = `ব্যালেন্স দিয়ে ${level} প্যাকেজ ক্রয় করুন`;
-      confirmBtn.className = 'w-full py-2.5 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white text-xs font-bold transition cursor-pointer active:scale-95 shadow';
+      confirmBtn.innerHTML = `<span>💎</span> <span>ব্যালেন্স দিয়ে ${level} প্যাকেজ ক্রয় করুন</span>`;
+      confirmBtn.className = 'w-full py-3 rounded-xl bg-[#1264c9] hover:bg-[#1877f2] text-white text-xs font-bold transition shadow-lg cursor-pointer active:scale-95 flex items-center justify-center gap-2';
     } else {
       confirmBtn.disabled = true;
-      confirmBtn.textContent = `ব্যালেন্স অপর্যাপ্ত (${level} এর জন্য ${formatMoney(price - userBal)} BDT প্রয়োজন)`;
-      confirmBtn.className = 'w-full py-2.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold border border-slate-700 cursor-not-allowed opacity-75';
+      confirmBtn.innerHTML = `<span>🔒</span> <span>ব্যালেন্স অপর্যাপ্ত (${formatMoney(price - userBal)} BDT ঘাটতি)</span>`;
+      confirmBtn.className = 'w-full py-3 rounded-xl bg-[#0a1838] text-slate-400 text-xs font-bold border border-[#1b3b80] cursor-not-allowed opacity-80 flex items-center justify-center gap-2';
     }
   }
 
@@ -724,27 +849,19 @@ function openPackagePurchaseModal(level, alertNotice) {
       depositBtn.classList.add('hidden');
     } else {
       depositBtn.classList.remove('hidden');
-      depositBtn.textContent = `+ ব্যালেন্স রিচার্জ / জমা করুন (${formatMoney(price - userBal)} BDT ঘাটতি)`;
+      depositBtn.innerHTML = `<span>⚡</span> <span>ব্যালেন্স রিচার্জ ট্যাবে যান (${formatMoney(price - userBal)} BDT ঘাটতি)</span>`;
     }
   }
 
-  modal.style.display = 'flex';
-  modal.hidden = false;
-  modal.removeAttribute('hidden');
+  switchSheetTab('purchase');
+  openActionSheet();
 }
 
 function closePackagePurchaseModal() {
-  const modal = document.getElementById('package-purchase-modal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.hidden = true;
-    modal.setAttribute('hidden', '');
-  }
+  closeActionSheet();
 }
 
 function openDepositModal(initialAmount) {
-  const modal = document.getElementById('deposit-modal');
-  if (!modal) return;
   const user = getCurrentUser();
   const curBalEl = document.getElementById('deposit-current-balance');
   if (curBalEl) curBalEl.textContent = formatMoney(user.balance || 0);
@@ -765,26 +882,20 @@ function openDepositModal(initialAmount) {
   document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
     const amt = parseInt(b.dataset.amount || '0', 10);
     if (amt === selectedDepositAmount) {
-      b.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      b.classList.add('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
       b.classList.remove('bg-[#0e2a66]');
     } else {
-      b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      b.classList.remove('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
       b.classList.add('bg-[#0e2a66]');
     }
   });
 
-  modal.style.display = 'flex';
-  modal.hidden = false;
-  modal.removeAttribute('hidden');
+  switchSheetTab('deposit');
+  openActionSheet();
 }
 
 function closeDepositModal() {
-  const modal = document.getElementById('deposit-modal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.hidden = true;
-    modal.setAttribute('hidden', '');
-  }
+  closeActionSheet();
 }
 
 function confirmPackagePurchase() {
@@ -798,7 +909,6 @@ function confirmPackagePurchase() {
   if (userBal < cost) {
     const deficit = cost - userBal;
     pendingPurchaseLevel = level;
-    closePackagePurchaseModal();
     openDepositModal(deficit);
     return;
   }
@@ -811,13 +921,13 @@ function confirmPackagePurchase() {
   }
   localStorage.setItem('aloSignedInUser', JSON.stringify(user));
 
-  closePackagePurchaseModal();
+  closeActionSheet();
   updateUserDetails(user);
   updateProfileMetrics();
   updateVipHallRooms();
   updateRecordsPanelPackages();
 
-  showToastNotification(`🎉 অভিনন্দন! আপনার ${level} (${pkg.name}) প্যাকেজ সফলভাবে সক্রিয় হয়েছে! এখন আপনি ${level}-এর সমস্ত কাজ করতে পারবেন।`);
+  showToastNotification(`🎉 অভিনন্দন! আপনার ${level} (${pkg.name}) সফলভাবে সক্রিয় হয়েছে! এখন আপনি ${level}-এর সমস্ত কাজ করতে পারবেন।`);
 
   renderPackageTasks(level);
   openDashboardPanel('platform-tasks');
@@ -832,8 +942,8 @@ function confirmDeposit() {
   if (!amount || amount <= 0) {
     const statusMsg = document.getElementById('deposit-status-message');
     if (statusMsg) {
-      statusMsg.className = 'text-center font-bold text-xs text-amber-400';
-      statusMsg.textContent = 'অনুগ্রহ করে রিচার্জের বৈধ পরিমাণ দিন।';
+      statusMsg.className = 'text-center font-bold text-xs text-amber-300';
+      statusMsg.textContent = 'অনুগ্রহ করে রিচার্জের সঠিক পরিমাণ দিন।';
     }
     return;
   }
@@ -842,9 +952,12 @@ function confirmDeposit() {
   user.balance = (Number(user.balance) || 0) + amount;
   localStorage.setItem('aloSignedInUser', JSON.stringify(user));
 
+  const curBalEl = document.getElementById('deposit-current-balance');
+  if (curBalEl) curBalEl.textContent = formatMoney(user.balance);
+
   const statusMsg = document.getElementById('deposit-status-message');
   if (statusMsg) {
-    statusMsg.className = 'text-center font-bold text-xs text-emerald-400';
+    statusMsg.className = 'text-center font-bold text-xs text-[#34d399]';
     statusMsg.textContent = `✅ ${formatMoney(amount)} BDT রিচার্জ সফল হয়েছে!`;
   }
 
@@ -854,13 +967,15 @@ function confirmDeposit() {
   updateRecordsPanelPackages();
 
   setTimeout(function() {
-    closeDepositModal();
     if (pendingPurchaseLevel) {
       const lvl = pendingPurchaseLevel;
       pendingPurchaseLevel = '';
       openPackagePurchaseModal(lvl);
+    } else {
+      closeActionSheet();
+      showToastNotification(`⚡ ${formatMoney(amount)} BDT রিচার্জ সফল হয়েছে! বর্তমান ব্যালেন্স: ${formatMoney(user.balance)} BDT`);
     }
-  }, 700);
+  }, 650);
 }
 
 function showToastNotification(messageText) {
@@ -868,16 +983,16 @@ function showToastNotification(messageText) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'alo-toast-notification';
-    toast.className = 'fixed top-5 inset-x-4 mx-auto max-w-sm z-[10005] p-3.5 rounded-xl bg-[#08173d]/95 border border-[#1b3b80] text-white shadow-2xl backdrop-blur-md text-xs leading-5 flex items-center gap-3 transition-all duration-300 transform -translate-y-12 opacity-0 pointer-events-none';
+    toast.className = 'fixed top-4 inset-x-4 mx-auto max-w-sm z-[10005] p-3.5 rounded-2xl bg-[#071b50]/95 border-2 border-[#35c6e7] text-white shadow-[0_10px_35px_rgba(7,27,80,0.9)] backdrop-blur-md text-xs leading-5 flex items-center gap-3 transition-all duration-300 transform -translate-y-16 opacity-0 pointer-events-none';
     document.body.appendChild(toast);
   }
-  toast.innerHTML = `<span class="text-xl shrink-0">✨</span><span class="flex-1 font-semibold">${messageText}</span>`;
-  toast.classList.remove('-translate-y-12', 'opacity-0', 'pointer-events-none');
+  toast.innerHTML = `<span class="text-xl shrink-0">✨</span><span class="flex-1 font-semibold text-[#e9f2ff]">${messageText}</span>`;
+  toast.classList.remove('-translate-y-16', 'opacity-0', 'pointer-events-none');
   toast.classList.add('translate-y-0', 'opacity-100');
   setTimeout(function() {
     toast.classList.remove('translate-y-0', 'opacity-100');
-    toast.classList.add('-translate-y-12', 'opacity-0', 'pointer-events-none');
-  }, 3500);
+    toast.classList.add('-translate-y-16', 'opacity-0', 'pointer-events-none');
+  }, 3800);
 }
 
 const platformTaskDescriptions = {
@@ -1373,14 +1488,14 @@ function renderPackageTasks(level) {
 
   if (!isUnlocked) {
     const banner = document.createElement('div');
-    banner.className = 'mb-4 p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs shadow-lg flex items-center justify-between gap-3';
+    banner.className = 'mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-[#0c2364] to-[#071b50] border-2 border-[#35c6e7]/60 text-white text-xs shadow-xl flex items-center justify-between gap-3 glow-pulse-cyan';
     banner.innerHTML = `
       <div class="min-w-0 flex-1">
-        <p class="font-bold text-white flex items-center gap-1.5"><span class="text-base text-amber-400">🔒</span> প্যাকেজ ক্রয় প্রয়োজন</p>
-        <p class="mt-1 text-[11px] text-amber-200/90 leading-4">ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ${activePackageLevel}-এর কাজ করতে আপনার ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</p>
+        <p class="font-bold text-[#35c6e7] flex items-center gap-1.5"><span class="text-base">🔒</span> প্যাকেজ ক্রয় প্রয়োজন</p>
+        <p class="mt-1 text-[11px] text-slate-200 leading-4">ফ্রিতে শুধু LV0 কাজ করতে পারবেন। ${activePackageLevel}-এর কাজ করতে আপনার ব্যালেন্স দিয়ে প্যাকেজ ক্রয় করতে হবে।</p>
       </div>
-      <button type="button" class="shrink-0 px-3.5 py-2 rounded-lg bg-[#1877f2] hover:bg-[#166fe5] text-white font-bold text-xs shadow transition active:scale-95 cursor-pointer" data-buy-package="${activePackageLevel}">
-        প্যাকেজ ক্রয়
+      <button type="button" class="shrink-0 px-3.5 py-2 rounded-xl bg-[#1264c9] hover:bg-[#1877f2] text-white font-bold text-xs shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1" data-buy-package="${activePackageLevel}">
+        <span>💎</span> <span>প্যাকেজ ক্রয়</span>
       </button>
     `;
     rows.push(banner);
@@ -1400,7 +1515,7 @@ function renderPackageTasks(level) {
       btnText = 'লকড 🔒';
       btnDisabled = false;
       extraAttr = `data-locked-level="${activePackageLevel}"`;
-      btnClass = 'platform-task-accept bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30';
+      btnClass = 'platform-task-accept bg-[#0c2364] text-[#35c6e7] border border-[#35c6e7]/40 hover:bg-[#1264c9] hover:text-white transition';
     } else if (isThisAccepted) {
       btnText = 'গৃহীত';
       btnDisabled = true;
@@ -1721,6 +1836,47 @@ setInterval(function() {
 
 // Global click event listeners
 document.addEventListener('click', function(event) {
+  // Action sheet close buttons (X button, bottom dismiss button, top grab handle, or backdrop click)
+  const closeSheetBtn = event.target.closest('#close-action-sheet-btn, #sheet-close-text-btn, [data-close-sheet]');
+  if (closeSheetBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeActionSheet();
+    return;
+  }
+  if (event.target && (event.target.id === 'alo-action-backdrop' || event.target.classList.contains('site-action-backdrop'))) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeActionSheet();
+    return;
+  }
+
+  // Action sheet tab clicks
+  const sheetTabPurchase = event.target.closest('#sheet-tab-purchase');
+  if (sheetTabPurchase) {
+    switchSheetTab('purchase');
+    return;
+  }
+  const sheetTabDeposit = event.target.closest('#sheet-tab-deposit');
+  if (sheetTabDeposit) {
+    switchSheetTab('deposit');
+    return;
+  }
+
+  // Switch to deposit from purchase
+  const openDepBtn = event.target.closest('#open-deposit-from-purchase-btn');
+  if (openDepBtn) {
+    pendingPurchaseLevel = currentPurchaseLevel;
+    const pkg = packageData[currentPurchaseLevel];
+    const user = getCurrentUser();
+    const deficit = pkg ? Math.max(0, pkg.price - (Number(user.balance) || 0)) : 3500;
+    const customInputs = document.querySelectorAll('#custom-deposit-amount');
+    customInputs.forEach(function(inp) { inp.value = deficit; });
+    selectedDepositAmount = deficit;
+    switchSheetTab('deposit');
+    return;
+  }
+
   // Navigation / Dashboard panel clicks
   const panelBtn = event.target.closest('[data-panel]');
   if (panelBtn) {
@@ -2191,7 +2347,7 @@ if (cancelSubmitBtn) {
   });
 }
 
-// Package purchase modal listeners
+// Action sheet event listeners (Site-Themed Animation System)
 const confirmPurchaseBtn = document.getElementById('confirm-package-purchase-btn');
 if (confirmPurchaseBtn) {
   confirmPurchaseBtn.addEventListener('click', confirmPackagePurchase);
@@ -2201,64 +2357,75 @@ const openDepositFromPurchaseBtn = document.getElementById('open-deposit-from-pu
 if (openDepositFromPurchaseBtn) {
   openDepositFromPurchaseBtn.addEventListener('click', function() {
     pendingPurchaseLevel = currentPurchaseLevel;
-    closePackagePurchaseModal();
     const pkg = packageData[currentPurchaseLevel];
     const user = getCurrentUser();
     const deficit = pkg ? Math.max(0, pkg.price - (Number(user.balance) || 0)) : 3500;
-    openDepositModal(deficit);
+    const customInput = document.getElementById('custom-deposit-amount');
+    if (customInput) customInput.value = deficit;
+    selectedDepositAmount = deficit;
+    switchSheetTab('deposit');
   });
 }
 
-const closePurchaseModalBtn = document.getElementById('close-purchase-modal-btn');
-if (closePurchaseModalBtn) closePurchaseModalBtn.addEventListener('click', closePackagePurchaseModal);
+const sheetTabPurchaseBtn = document.getElementById('sheet-tab-purchase');
+if (sheetTabPurchaseBtn) {
+  sheetTabPurchaseBtn.addEventListener('click', function() {
+    switchSheetTab('purchase');
+  });
+}
 
-const cancelPurchaseModalBtn = document.getElementById('cancel-package-purchase-btn');
-if (cancelPurchaseModalBtn) cancelPurchaseModalBtn.addEventListener('click', closePackagePurchaseModal);
+const sheetTabDepositBtn = document.getElementById('sheet-tab-deposit');
+if (sheetTabDepositBtn) {
+  sheetTabDepositBtn.addEventListener('click', function() {
+    switchSheetTab('deposit');
+  });
+}
 
-const packagePurchaseModal = document.getElementById('package-purchase-modal');
-if (packagePurchaseModal) {
-  packagePurchaseModal.addEventListener('click', function(e) {
-    if (e.target === packagePurchaseModal) {
-      closePackagePurchaseModal();
+const closeActionSheetBtn = document.getElementById('close-action-sheet-btn');
+if (closeActionSheetBtn) {
+  closeActionSheetBtn.addEventListener('click', closeActionSheet);
+}
+
+const sheetCloseTextBtn = document.getElementById('sheet-close-text-btn');
+if (sheetCloseTextBtn) {
+  sheetCloseTextBtn.addEventListener('click', closeActionSheet);
+}
+
+const actionBackdrop = document.getElementById('alo-action-backdrop');
+if (actionBackdrop) {
+  actionBackdrop.addEventListener('click', closeActionSheet);
+}
+
+const closeInlineRechargeBtn = document.getElementById('close-inline-recharge-btn');
+if (closeInlineRechargeBtn) {
+  closeInlineRechargeBtn.addEventListener('click', function() {
+    const drawer = document.getElementById('inline-recharge-drawer');
+    if (drawer) {
+      drawer.classList.add('hidden');
     }
   });
 }
 
-// Deposit modal listeners
+// Deposit confirmation listener
 const confirmDepositBtn = document.getElementById('confirm-deposit-btn');
 if (confirmDepositBtn) {
   confirmDepositBtn.addEventListener('click', confirmDeposit);
 }
 
-const closeDepositModalBtn = document.getElementById('close-deposit-modal-btn');
-if (closeDepositModalBtn) closeDepositModalBtn.addEventListener('click', closeDepositModal);
-
-const cancelDepositModalBtn = document.getElementById('cancel-deposit-btn');
-if (cancelDepositModalBtn) cancelDepositModalBtn.addEventListener('click', closeDepositModal);
-
-const depositModal = document.getElementById('deposit-modal');
-if (depositModal) {
-  depositModal.addEventListener('click', function(e) {
-    if (e.target === depositModal) {
-      closeDepositModal();
-    }
-  });
-}
-
-// Quick deposit amount buttons
+// Quick deposit amount buttons with site-colors selection animation
 document.querySelectorAll('.quick-deposit-amt').forEach(function(btn) {
   btn.addEventListener('click', function() {
     const amt = parseFloat(btn.dataset.amount || '0');
     if (amt > 0) {
       selectedDepositAmount = amt;
-      const customInput = document.getElementById('custom-deposit-amount');
-      if (customInput) customInput.value = amt;
+      const customInputs = document.querySelectorAll('#custom-deposit-amount');
+      customInputs.forEach(function(inp) { inp.value = amt; });
 
       document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
-        b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+        b.classList.remove('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
         b.classList.add('bg-[#0e2a66]');
       });
-      btn.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+      btn.classList.add('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
       btn.classList.remove('bg-[#0e2a66]');
     }
   });
@@ -2272,10 +2439,10 @@ if (customDepositInput) {
       selectedDepositAmount = val;
       document.querySelectorAll('.quick-deposit-amt').forEach(function(b) {
         if (parseFloat(b.dataset.amount || '0') === val) {
-          b.classList.add('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+          b.classList.add('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
           b.classList.remove('bg-[#0e2a66]');
         } else {
-          b.classList.remove('ring-2', 'ring-emerald-400', 'bg-[#1877f2]');
+          b.classList.remove('ring-2', 'ring-[#35c6e7]', 'bg-[#1264c9]');
           b.classList.add('bg-[#0e2a66]');
         }
       });
@@ -2291,20 +2458,34 @@ function initApp() {
   } catch (error) {
     savedUser = null;
   }
+
+  let accounts = [];
+  try {
+    accounts = JSON.parse(localStorage.getItem('aloAccounts') || '[]');
+  } catch (e) {
+    accounts = [];
+  }
+  const latestAccount = accounts.length > 0 ? accounts[accounts.length - 1] : null;
+
   if (!savedUser) {
+    const regPhone = latestAccount ? (latestAccount.accountNumber || latestAccount.phone || '1735235999') : '1735235999';
     savedUser = {
-      name: 'সদস্য',
-      phone: '1735235999',
-      accountNumber: '1735235999',
-      inviteCode: '728207',
-      memberId: '1105',
+      name: (latestAccount && latestAccount.name) || 'সদস্য',
+      phone: regPhone,
+      accountNumber: regPhone,
+      inviteCode: (latestAccount && latestAccount.inviteCode) || '728207',
+      memberId: (latestAccount && latestAccount.memberId) || '1105',
       superiorId: '11',
-      packageLevel: 'LV0',
-      purchasedPackages: ['LV0'],
-      balance: 0.00
+      packageLevel: (latestAccount && latestAccount.packageLevel) || 'LV0',
+      purchasedPackages: (latestAccount && latestAccount.purchasedPackages) || ['LV0'],
+      balance: (latestAccount && typeof latestAccount.balance === 'number') ? latestAccount.balance : 0.00
     };
     localStorage.setItem('aloSignedInUser', JSON.stringify(savedUser));
   } else {
+    if (latestAccount && (savedUser.accountNumber === '1735235999' || !savedUser.accountNumber)) {
+      savedUser.accountNumber = latestAccount.accountNumber || latestAccount.phone;
+      savedUser.phone = latestAccount.phone || latestAccount.accountNumber;
+    }
     if (!savedUser.accountNumber && !savedUser.phone) savedUser.accountNumber = '1735235999';
     if (!savedUser.inviteCode) savedUser.inviteCode = '728207';
     if (!savedUser.memberId) savedUser.memberId = '1105';

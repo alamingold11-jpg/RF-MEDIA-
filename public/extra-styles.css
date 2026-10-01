@@ -210,3 +210,167 @@ html.is-view-transitioning body { overflow-x: hidden; }
 .phone-register-login { margin-top: 1.15rem; font-size: 0.82rem; text-align: center; color: var(--color-muted); }
 .phone-register-login button { color: var(--color-profile-cyan); font-weight: 700; cursor: pointer; }
 .page-language-switch { min-height: 2.5rem; border: 1px solid var(--color-profile-border); border-radius: calc(var(--radius) * 0.4); background: color-mix(in srgb, var(--color-profile-card) 92%, transparent); padding: 0.45rem 0.65rem; color: var(--color-profile-text); font-size: 0.75rem; font-weight: 600; outline: none; }
+
+/* ============================================================
+   SITE COLOR THEMED ANIMATION SYSTEM (NO POPUPS)
+   Colors: #071b50 (deep navy), #1264c9 (blue), #35c6e7 (cyan),
+           #151d36 (card), #123b8d (border), #34d399 (emerald)
+   ============================================================ */
+
+/* 1. Neon Pulse Highlight for Selected Package Card */
+@keyframes site-card-glow-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(53, 198, 231, 0.9), 0 8px 24px rgba(18, 100, 201, 0.4);
+    border-color: #35c6e7;
+    transform: scale(1);
+  }
+  30% {
+    box-shadow: 0 0 35px 8px rgba(53, 198, 231, 0.85), 0 0 60px rgba(24, 119, 242, 0.6);
+    border-color: #35c6e7;
+    transform: scale(1.025);
+  }
+  65% {
+    box-shadow: 0 0 20px 4px rgba(53, 198, 231, 0.5), 0 8px 24px rgba(18, 100, 201, 0.4);
+    border-color: #1877f2;
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 198, 231, 0);
+    border-color: inherit;
+    transform: scale(1);
+  }
+}
+
+.site-card-highlighted {
+  animation: site-card-glow-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+/* 2. Floating Top Banner Animation in Site Colors */
+@keyframes site-banner-slide-down {
+  0% {
+    transform: translate(-50%, -140%) scale(0.92);
+    opacity: 0;
+  }
+  65% {
+    transform: translate(-50%, 6px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes site-banner-slide-up {
+  0% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -140%) scale(0.92);
+    opacity: 0;
+  }
+}
+
+.site-floating-banner {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 2rem);
+  max-width: 410px;
+  z-index: 10050;
+  background: linear-gradient(135deg, #071b50 0%, #0d2a75 100%);
+  border: 1.5px solid var(--color-profile-cyan, #35c6e7);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(7, 27, 80, 0.75), 0 0 25px rgba(53, 198, 231, 0.35);
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: site-banner-slide-down 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.site-floating-banner.is-leaving {
+  animation: site-banner-slide-up 0.32s ease forwards;
+}
+
+/* 3. In-Card Drawer Accordion Animation */
+.package-buy-drawer {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, margin 0.3s ease;
+}
+
+.package-buy-drawer.open {
+  max-height: 480px;
+  opacity: 1;
+}
+
+/* 4. In-Page Recharge Drawer */
+#inline-recharge-drawer {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, margin 0.35s ease;
+}
+
+#inline-recharge-drawer.open {
+  max-height: 650px;
+  opacity: 1;
+  margin-bottom: 1rem;
+}
+
+/* 5. Bottom Slide-Up Sheet Animation in Site Colors */
+@keyframes site-sheet-enter {
+  0% {
+    transform: translateY(100%);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes site-sheet-exit {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.site-bottom-sheet-content {
+  animation: site-sheet-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.site-bottom-sheet-content.is-closing {
+  animation: site-sheet-exit 0.28s ease forwards;
+}
+
+/* 6. Quick Deposit Button Selection in Site Colors */
+.quick-deposit-amt.active {
+  background: linear-gradient(135deg, #1877f2, #1264c9) !important;
+  border-color: #35c6e7 !important;
+  box-shadow: 0 0 15px rgba(53, 198, 231, 0.5) !important;
+  color: #ffffff !important;
+  transform: scale(1.03);
+}
+
+/* 7. Balance Number Flash on Update */
+@keyframes balance-glow-flash {
+  0% { color: #35c6e7; text-shadow: 0 0 16px rgba(53, 198, 231, 0.9); transform: scale(1.12); }
+  50% { color: #34d399; text-shadow: 0 0 20px rgba(52, 211, 153, 0.9); transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.balance-flash {
+  animation: balance-glow-flash 1.2s ease-out forwards;
+}
+
